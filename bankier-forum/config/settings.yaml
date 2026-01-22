@@ -1,0 +1,60 @@
+# Bankier Sentiment Scraper Configuration
+
+scraping:
+  base_url: "https://www.bankier.pl"
+  requests_per_second: 0.5  # 1 request per 2 seconds
+  max_retries: 3
+  retry_backoff: [5, 15, 60]  # seconds
+  max_pages_per_run: 100
+  user_agents:
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15"
+    - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+forums:
+  - id: 6
+    name: "Giełda"
+    slug: "gielda"
+    priority: high
+  - id: 50
+    name: "Jak grać na giełdzie"
+    slug: "jak-grac-na-gieldzie"
+    priority: medium
+  - id: 55
+    name: "Kryptowaluty"
+    slug: "kryptowaluty"
+    priority: medium
+  - id: 7
+    name: "Forex"
+    slug: "forex"
+    priority: low
+  - id: 59
+    name: "ETF"
+    slug: "etf"
+    priority: medium
+
+nlp:
+  model_name: "allegro/herbert-base-cased"
+  use_model: false  # Set to true to use HerBERT (requires GPU)
+  batch_size: 32
+  lexicon_weight: 0.3
+  sentiment_threshold:
+    bullish: 0.2
+    bearish: -0.2
+
+database:
+  # SQLite for development
+  url: "sqlite:///data/bankier_sentiment.db"
+  # PostgreSQL for production
+  # url: "postgresql://user:pass@localhost/bankier"
+
+scheduler:
+  scrape_interval_hours: 4
+  aggregation_time: "00:30"  # Daily at 00:30
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false

@@ -1,0 +1,45 @@
+[project]
+name = "bankier-sentiment"
+version = "0.1.0"
+description = "Bankier.pl forum sentiment scraper for Polish equities (GPW)"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27.0",
+    "selectolax>=0.3.21",
+    "transformers>=4.40.0",
+    "torch>=2.2.0",
+    "pydantic>=2.7.0",
+    "sqlalchemy>=2.0.0",
+    "aiosqlite>=0.20.0",
+    "apscheduler>=3.10.0",
+    "fastapi>=0.111.0",
+    "uvicorn>=0.29.0",
+    "pandas>=2.2.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+[project.scripts]
+bankier-scrape = "scripts.run_scraper:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
