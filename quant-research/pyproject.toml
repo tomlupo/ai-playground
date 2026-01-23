@@ -5,9 +5,15 @@ description = "A Python quantitative finance research toolkit with data fetching
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "click>=8.3.1",
     "matplotlib>=3.10.8",
     "numpy>=2.4.1",
     "pandas>=3.0.0",
+    "pyyaml>=6.0.3",
+    "rich>=14.2.0",
     "scipy>=1.17.0",
     "yfinance>=1.0",
 ]
+
+[project.scripts]
+quant-pipeline = "scripts.run_pipeline:cli"

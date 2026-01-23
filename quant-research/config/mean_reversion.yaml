@@ -1,0 +1,70 @@
+# Mean Reversion Strategy Pipeline
+# RSI-based mean reversion on diversified portfolio
+
+name: "Mean Reversion Strategy"
+description: "RSI mean reversion strategy on diversified blue-chip stocks"
+
+# Data Configuration
+data:
+  symbols:
+    - JPM
+    - JNJ
+    - PG
+    - KO
+    - WMT
+    - XOM
+  period: "2y"
+  interval: "1d"
+
+# Technical Indicators Configuration
+indicators:
+  sma:
+    - period: 20
+    - period: 50
+  rsi:
+    period: 14
+  bollinger:
+    period: 20
+    std_dev: 2
+  atr:
+    period: 14
+  volatility:
+    period: 20
+
+# Portfolio Configuration
+portfolio:
+  initial_capital: 100000
+  risk_free_rate: 0.05
+  optimization:
+    - min_variance
+    - equal_weight
+  constraints:
+    max_weight: 0.25
+    min_weight: 0.05
+
+# Backtest Configuration
+backtest:
+  strategy: rsi_mean_reversion
+  params:
+    period: 14
+    oversold: 30
+    overbought: 70
+  commission: 0.001
+  slippage: 0.0005
+
+# Analysis Configuration
+analysis:
+  metrics:
+    - total_return
+    - annualized_return
+    - volatility
+    - sharpe_ratio
+    - sortino_ratio
+    - max_drawdown
+    - win_rate
+  risk_metrics:
+    var_confidence: 0.95
+    cvar_confidence: 0.95
+  export:
+    format: "console"
+    path: null

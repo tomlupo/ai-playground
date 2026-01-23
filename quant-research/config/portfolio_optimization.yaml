@@ -1,0 +1,69 @@
+# Portfolio Optimization Pipeline
+# Focuses on portfolio construction and risk analysis
+
+name: "Portfolio Optimization"
+description: "Multi-asset portfolio optimization with efficient frontier analysis"
+
+# Data Configuration
+data:
+  symbols:
+    - SPY   # S&P 500
+    - QQQ   # NASDAQ
+    - IWM   # Russell 2000
+    - EFA   # International Developed
+    - EEM   # Emerging Markets
+    - TLT   # Long-term Treasuries
+    - GLD   # Gold
+    - VNQ   # Real Estate
+  period: "3y"
+  interval: "1d"
+
+# Technical Indicators Configuration
+indicators:
+  sma:
+    - period: 50
+    - period: 200
+  volatility:
+    period: 20
+  atr:
+    period: 14
+
+# Portfolio Configuration
+portfolio:
+  initial_capital: 1000000
+  risk_free_rate: 0.045
+  optimization:
+    - max_sharpe
+    - min_variance
+    - equal_weight
+  efficient_frontier:
+    enabled: true
+    points: 50
+  constraints:
+    max_weight: 0.30
+    min_weight: 0.02
+
+# Backtest Configuration (using optimized weights)
+backtest:
+  strategy: buy_and_hold
+  rebalance_frequency: "quarterly"
+  commission: 0.0005
+  slippage: 0.0002
+
+# Analysis Configuration
+analysis:
+  metrics:
+    - total_return
+    - annualized_return
+    - volatility
+    - sharpe_ratio
+    - sortino_ratio
+    - max_drawdown
+    - calmar_ratio
+  risk_metrics:
+    var_confidence: 0.95
+    cvar_confidence: 0.99
+  correlation_analysis: true
+  export:
+    format: "console"
+    path: null

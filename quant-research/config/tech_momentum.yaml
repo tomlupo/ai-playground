@@ -1,0 +1,75 @@
+# Tech Momentum Strategy Pipeline
+# Focuses on large-cap tech stocks with momentum indicators
+
+name: "Tech Momentum Strategy"
+description: "Momentum-based strategy on large-cap tech stocks using SMA crossover"
+
+# Data Configuration
+data:
+  symbols:
+    - AAPL
+    - MSFT
+    - GOOGL
+    - AMZN
+    - NVDA
+    - META
+  period: "1y"
+  interval: "1d"
+
+# Technical Indicators Configuration
+indicators:
+  sma:
+    - period: 20
+    - period: 50
+    - period: 200
+  ema:
+    - period: 12
+    - period: 26
+  rsi:
+    period: 14
+  macd:
+    fast: 12
+    slow: 26
+    signal: 9
+  bollinger:
+    period: 20
+    std_dev: 2
+  atr:
+    period: 14
+
+# Portfolio Configuration
+portfolio:
+  initial_capital: 100000
+  risk_free_rate: 0.05
+  optimization:
+    - max_sharpe
+    - min_variance
+  constraints:
+    max_weight: 0.4
+    min_weight: 0.0
+
+# Backtest Configuration
+backtest:
+  strategy: sma_crossover
+  params:
+    short_period: 20
+    long_period: 50
+  commission: 0.001
+  slippage: 0.0005
+
+# Analysis Configuration
+analysis:
+  metrics:
+    - total_return
+    - annualized_return
+    - volatility
+    - sharpe_ratio
+    - max_drawdown
+    - win_rate
+    - calmar_ratio
+  risk_metrics:
+    var_confidence: 0.95
+    cvar_confidence: 0.95
+  export:
+    format: "console"  # console, csv, json
+    path: null
