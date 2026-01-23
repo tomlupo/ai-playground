@@ -1,0 +1,77 @@
+# Trading Configuration: Forex/Futures on OANDA
+# ==============================================
+# Use this configuration for forex and CFD trading
+
+mode: paper
+
+# Trading symbols (forex pairs and indices)
+symbols:
+  # Major pairs
+  - EUR_USD
+  - GBP_USD
+  - USD_JPY
+  - USD_CHF
+  - AUD_USD
+  - USD_CAD
+  # Crosses
+  - EUR_GBP
+  - EUR_JPY
+  - GBP_JPY
+  # Commodities
+  - XAU_USD  # Gold
+  - XAG_USD  # Silver
+  # Indices (as CFDs)
+  - SPX500_USD
+  - NAS100_USD
+
+# Exchange connections
+exchanges:
+  - type: oanda
+    name: oanda_practice
+    paper_trading: true
+    # Credentials from environment:
+    # OANDA_API_KEY
+    # OANDA_ACCOUNT_ID
+
+# Simulator
+simulator:
+  enabled: true
+  initial_balance:
+    USD: 50000.0
+  default_volatility: 0.08  # 8% annual (typical for forex)
+  default_spread_pct: 0.00005  # 0.5 pips (tight for majors)
+  commission_rate: 0.0  # OANDA has no commission, spread only
+  slippage_bps: 0.5
+  fill_latency_ms: 5.0
+
+# Risk management (forex-specific)
+risk:
+  max_position_pct: 0.02  # Small positions due to leverage
+  max_total_exposure: 0.20  # Limit overall exposure
+  max_loss_per_trade_pct: 0.01  # Max 1% per trade
+  daily_loss_limit_pct: 0.02  # Max 2% daily
+  max_drawdown_pct: 0.10  # Max 10% drawdown
+  default_sizer: volatility
+  default_size_pct: 0.01
+
+# Logging
+logging:
+  level: INFO
+  log_file: logs/forex_trading.log
+  log_trades: true
+  log_orders: true
+  log_signals: true
+
+# Strategy parameters
+strategy:
+  name: carry_momentum
+  # Carry trade parameters
+  interest_rate_threshold: 0.02
+  # Momentum parameters
+  trend_lookback: 20
+  breakout_periods: 50
+  # Risk parameters
+  atr_multiplier: 2.0
+  trailing_stop: true
+
+data_dir: ./data/forex

@@ -1,0 +1,64 @@
+# Trading Configuration: Equity on Interactive Brokers
+# ====================================================
+# Use this configuration for stock trading
+
+mode: paper
+
+# Trading symbols (US stocks)
+symbols:
+  - AAPL
+  - MSFT
+  - GOOGL
+  - AMZN
+  - NVDA
+  - META
+  - TSLA
+
+# Exchange connections
+exchanges:
+  - type: interactive_brokers
+    name: ib_tws
+    host: "127.0.0.1"
+    port: 7497  # 7497=TWS Paper, 7496=TWS Live, 4001=Gateway Paper
+    client_id: 1
+    paper_trading: true
+    # Account ID loaded from IB_ACCOUNT_ID env var
+
+# Simulator (for testing without TWS)
+simulator:
+  enabled: true
+  initial_balance:
+    USD: 100000.0
+  default_volatility: 0.25  # 25% annual (typical for equities)
+  default_spread_pct: 0.0001  # 1 bp (tight spreads for liquid stocks)
+  commission_rate: 0.0001  # $0.01 per share typical
+  slippage_bps: 1.0
+  fill_latency_ms: 10.0
+
+# Risk management (more conservative for equities)
+risk:
+  max_position_pct: 0.05  # Max 5% per stock
+  max_total_exposure: 1.0  # Can use full capital
+  max_loss_per_trade_pct: 0.01  # Max 1% loss per trade
+  daily_loss_limit_pct: 0.03  # Max 3% daily loss
+  max_drawdown_pct: 0.15  # Max 15% drawdown
+  default_sizer: risk_based
+  default_size_pct: 0.01
+
+# Logging
+logging:
+  level: INFO
+  log_file: logs/equity_trading.log
+  log_trades: true
+  log_orders: true
+  log_signals: true
+
+# Strategy parameters
+strategy:
+  name: value_momentum
+  lookback_days: 60
+  rebalance_frequency: weekly
+  min_market_cap: 10000000000  # $10B minimum
+  max_positions: 10
+
+data_dir: ./data/equity

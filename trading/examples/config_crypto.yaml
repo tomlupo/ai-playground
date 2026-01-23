@@ -1,0 +1,68 @@
+# Trading Configuration: Crypto on Binance
+# ==========================================
+# Use this configuration for cryptocurrency trading
+
+mode: paper  # Options: live, paper, backtest
+
+# Trading symbols
+symbols:
+  - BTCUSDT
+  - ETHUSDT
+  - SOLUSDT
+
+# Exchange connections
+exchanges:
+  - type: binance
+    name: binance_spot
+    testnet: true  # Use testnet for paper trading
+    paper_trading: true
+    # API keys loaded from environment:
+    # BINANCE_API_KEY, BINANCE_API_SECRET
+
+  - type: binance_futures
+    name: binance_perp
+    testnet: true
+    paper_trading: true
+
+# Simulator fallback (if exchange unavailable)
+simulator:
+  enabled: true
+  initial_balance:
+    USD: 100000.0
+    BTC: 1.0
+    ETH: 10.0
+  default_volatility: 0.60  # 60% annual (typical for crypto)
+  default_spread_pct: 0.0005  # 5 bps
+  commission_rate: 0.001  # 0.1%
+  slippage_bps: 2.0
+  random_seed: 42  # For reproducibility
+
+# Risk management
+risk:
+  max_position_pct: 0.10  # Max 10% per position
+  max_total_exposure: 0.80  # Max 80% exposure
+  max_loss_per_trade_pct: 0.02  # Max 2% loss per trade
+  daily_loss_limit_pct: 0.05  # Max 5% daily loss
+  max_drawdown_pct: 0.20  # Max 20% drawdown
+  default_sizer: percent_equity
+  default_size_pct: 0.02  # 2% per trade
+
+# Logging
+logging:
+  level: INFO
+  log_file: logs/crypto_trading.log
+  log_trades: true
+  log_orders: true
+  log_signals: true
+
+# Strategy parameters (passed to strategy)
+strategy:
+  name: momentum
+  fast_period: 12
+  slow_period: 26
+  signal_period: 9
+  take_profit_pct: 0.05
+  stop_loss_pct: 0.02
+
+# Data storage
+data_dir: ./data/crypto
