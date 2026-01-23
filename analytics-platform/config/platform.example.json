@@ -1,0 +1,20 @@
+{
+  "parquet": {
+    "base_path": "data",
+    "compression": "zstd",
+    "row_group_size": 100000
+  },
+  "duckdb": {
+    "database_path": "warehouse/warehouse.duckdb",
+    "read_only": false,
+    "threads": null,
+    "memory_limit": null
+  },
+  "postgres": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "analytics",
+    "user": "postgres",
+    "schema": "public"
+  }
+}
