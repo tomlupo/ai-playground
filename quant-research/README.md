@@ -15,11 +15,15 @@ A comprehensive Python quantitative finance research toolkit built with modern b
 - **Advanced Portfolio Optimization**: Risk parity, HRP, CVaR optimization via riskfolio-lib
 - **Performance Analytics**: Comprehensive metrics with quantstats
 - **HTML Reporting**: Interactive reports with Plotly visualizations
+- **Vectorized Backtesting**: Fast numpy-based backtesting with parameter optimization
+- **Caching**: Disk and memory caching for expensive operations
+- **Notebook Pipelines**: Parameterized notebook execution with papermill
 
 ### Pipeline System
 - YAML-based configuration
 - CLI interface for running research flows
 - Automated workflow: Config → Data → Indicators → Portfolio → Backtest → Analysis
+- Built-in caching for faster re-runs
 
 ## Installation
 
@@ -165,6 +169,107 @@ generator.generate_from_pipeline(pipeline_result)
 generator.save("pipeline_report.html")
 ```
 
+### Vectorized Backtesting (Fast)
+
+```python
+from quant_research import VectorizedBacktester, ParameterOptimizer
+
+# Fast vectorized backtester
+backtester = VectorizedBacktester()
+
+# Run different strategies
+result = backtester.run_sma_crossover(prices, short_period=20, long_period=50)
+result = backtester.run_rsi_strategy(prices, period=14, oversold=30, overbought=70)
+result = backtester.run_bollinger_strategy(prices, period=20, std_dev=2)
+result = backtester.run_macd_strategy(prices, fast=12, slow=26, signal=9)
+
+print(f"Return: {result.total_return:.2%}")
+print(f"Sharpe: {result.sharpe_ratio:.2f}")
+
+# Parameter optimization with grid search
+optimizer = ParameterOptimizer(backtester)
+best_params, results = optimizer.grid_search(
+    prices,
+    strategy="sma",
+    param_grid={
+        "short_period": [10, 20, 30],
+        "long_period": [50, 100, 200],
+    },
+)
+print(f"Best params: {best_params}")
+
+# Walk-forward optimization
+wf_results = optimizer.walk_forward(
+    prices,
+    strategy="sma",
+    param_grid={"short_period": [10, 20], "long_period": [50, 100]},
+    train_size=252,
+    test_size=63,
+)
+```
+
+### Caching for Performance
+
+```python
+from quant_research import (
+    CacheManager,
+    DataCache,
+    cached,
+    clear_all_caches,
+    get_cache_info,
+)
+
+# Use the @cached decorator
+@cached(ttl=3600, key_prefix="my_analysis")
+def expensive_analysis(data):
+    # This result will be cached for 1 hour
+    return complex_computation(data)
+
+# Data caching for market data
+data_cache = DataCache()
+data_cache.set("AAPL", df)
+cached_data = data_cache.get("AAPL")
+
+# Cache management
+info = get_cache_info()
+print(f"Cache size: {info['total_size_mb']:.2f} MB")
+clear_all_caches()  # Clear all caches
+```
+
+### Notebook Pipelines with Papermill
+
+```python
+from quant_research import (
+    NotebookPipeline,
+    create_all_templates,
+    run_notebook_pipeline,
+)
+
+# Create notebook templates
+create_all_templates("notebooks/")
+
+# Execute notebook with parameters
+output = run_notebook_pipeline(
+    "notebooks/strategy_comparison.ipynb",
+    parameters={
+        "symbol": "AAPL",
+        "period": "2y",
+        "strategies": ["sma", "rsi", "macd"],
+    },
+)
+
+# Batch execution
+pipeline = NotebookPipeline()
+outputs = pipeline.execute_batch(
+    "notebooks/ml_prediction.ipynb",
+    parameter_sets=[
+        {"symbol": "AAPL", "horizon": 5},
+        {"symbol": "MSFT", "horizon": 5},
+        {"symbol": "GOOGL", "horizon": 5},
+    ],
+)
+```
+
 ## Pipeline System
 
 ### Running Pipelines via CLI
@@ -240,6 +345,11 @@ analysis:
 | `tech_momentum.yaml` | SMA Crossover | Momentum on large-cap tech stocks |
 | `mean_reversion.yaml` | RSI Mean Reversion | Mean reversion on blue-chip stocks |
 | `portfolio_optimization.yaml` | Multi-Asset | Diversified portfolio with ETFs |
+| `parameter_optimization.yaml` | Grid Search | Strategy parameter optimization |
+| `sector_rotation.yaml` | Sector Rotation | Momentum-based sector ETF rotation |
+| `multi_strategy.yaml` | Ensemble | Multiple strategies with voting |
+| `ml_prediction.yaml` | ML Prediction | Machine learning direction prediction |
+| `notebook_analysis.yaml` | Notebook Pipeline | Execute parameterized notebooks |
 
 ## Module Reference
 
@@ -260,7 +370,10 @@ analysis:
 | `ml_pipeline` | scikit-learn | ML for return/direction prediction |
 | `portfolio_advanced` | riskfolio-lib | Advanced optimization (HRP, CVaR, etc.) |
 | `backtest_advanced` | quantstats | Comprehensive performance analytics |
+| `backtest_vectorized` | numpy | Fast vectorized backtesting & optimization |
 | `reporting` | plotly | Interactive HTML reports |
+| `caching` | diskcache/joblib | Disk and memory caching |
+| `notebook_pipeline` | papermill | Parameterized notebook execution |
 
 ## Technical Indicators
 
@@ -312,6 +425,15 @@ Automatically generates 40+ features including:
 - quantstats - Performance analytics
 - plotly - Visualizations
 
+### Performance
+- joblib - Parallel processing & caching
+- diskcache - Disk-based caching
+
+### Notebooks
+- papermill - Parameterized notebook execution
+- nbformat - Notebook manipulation
+- ipykernel - Jupyter kernel
+
 ### CLI
 - click - Command line interface
 - rich - Terminal formatting
@@ -322,9 +444,15 @@ Automatically generates 40+ features including:
 ```
 quant-research/
 ├── config/                      # Pipeline configurations
-│   ├── tech_momentum.yaml
-│   ├── mean_reversion.yaml
-│   └── portfolio_optimization.yaml
+│   ├── tech_momentum.yaml       # Tech stock momentum strategy
+│   ├── mean_reversion.yaml      # RSI mean reversion strategy
+│   ├── portfolio_optimization.yaml  # Multi-asset optimization
+│   ├── parameter_optimization.yaml  # Grid search optimization
+│   ├── sector_rotation.yaml     # Sector ETF rotation
+│   ├── multi_strategy.yaml      # Ensemble strategies
+│   ├── ml_prediction.yaml       # ML direction prediction
+│   └── notebook_analysis.yaml   # Notebook pipeline
+├── notebooks/                   # Jupyter notebook templates
 ├── scripts/
 │   └── run_pipeline.py          # CLI interface
 ├── quant_research/
@@ -333,11 +461,14 @@ quant-research/
 │   ├── indicators.py            # Technical indicators
 │   ├── backtest.py              # Basic backtesting
 │   ├── backtest_advanced.py     # QuantStats integration
+│   ├── backtest_vectorized.py   # Fast vectorized backtesting
 │   ├── portfolio.py             # Basic portfolio
 │   ├── portfolio_advanced.py    # Riskfolio integration
 │   ├── ml_pipeline.py           # ML models
-│   ├── pipeline.py              # Research workflow
-│   └── reporting.py             # HTML reports
+│   ├── pipeline.py              # Research workflow (with caching)
+│   ├── reporting.py             # HTML reports
+│   ├── caching.py               # Disk/memory caching
+│   └── notebook_pipeline.py     # Papermill integration
 ├── main.py                      # Example script
 ├── pyproject.toml               # Project config
 └── README.md

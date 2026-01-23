@@ -1,0 +1,62 @@
+# Parameter Optimization Pipeline
+# Grid search and walk-forward optimization
+
+name: "Parameter Optimization"
+description: "Grid search optimization for SMA and RSI strategies with walk-forward validation"
+
+# Data Configuration
+data:
+  symbols:
+    - AAPL
+    - MSFT
+    - GOOGL
+  period: "3y"
+  interval: "1d"
+
+# Caching Configuration
+cache:
+  enabled: true
+  ttl: 86400  # 24 hours
+  data_cache: true
+  indicator_cache: true
+
+# Optimization Configuration
+optimization:
+  strategies:
+    - name: sma
+      param_grid:
+        short_period: [5, 10, 15, 20, 25, 30]
+        long_period: [30, 50, 75, 100, 150, 200]
+    - name: rsi
+      param_grid:
+        period: [7, 14, 21, 28]
+        oversold: [20, 25, 30, 35]
+        overbought: [65, 70, 75, 80]
+    - name: bollinger
+      param_grid:
+        period: [10, 15, 20, 25, 30]
+        std_dev: [1.5, 2.0, 2.5, 3.0]
+
+  metric: sharpe_ratio  # Metric to optimize
+  walk_forward:
+    enabled: true
+    train_size: 252  # 1 year
+    test_size: 63    # 1 quarter
+
+# Backtest Configuration
+backtest:
+  initial_capital: 100000
+  commission: 0.001
+  slippage: 0.0005
+
+# Analysis Configuration
+analysis:
+  metrics:
+    - total_return
+    - sharpe_ratio
+    - sortino_ratio
+    - max_drawdown
+    - win_rate
+  export:
+    format: "html"
+    path: "reports/parameter_optimization.html"

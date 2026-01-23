@@ -1,16 +1,20 @@
 [project]
 name = "quant-research"
-version = "0.2.0"
-description = "A comprehensive Python quant research toolkit with ML, advanced portfolio optimization (riskfolio-lib), performance analytics (quantstats), and HTML reporting"
+version = "0.3.0"
+description = "A comprehensive Python quant research toolkit with ML, vectorized backtesting, caching, notebook pipelines (papermill), and HTML reporting"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.3.1",
+    "diskcache>=5.6.3",
+    "ipykernel>=7.1.0",
+    "joblib>=1.5.3",
     "kaleido>=1.2.0",
     "matplotlib>=3.10.8",
     "nbformat>=5.10.4",
     "numpy>=2.4.1",
     "pandas>=3.0.0",
+    "papermill>=2.6.0",
     "plotly>=6.5.2",
     "pyyaml>=6.0.3",
     "quantstats>=0.0.81",

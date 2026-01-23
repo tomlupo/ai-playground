@@ -1,0 +1,50 @@
+# Notebook Analysis Pipeline
+# Execute parameterized notebooks for research
+
+name: "Notebook Analysis Pipeline"
+description: "Execute research notebooks with different parameter sets"
+
+# Notebook Configuration
+notebooks:
+  templates_dir: "notebooks"
+  output_dir: "outputs"
+  kernel: "python3"
+
+# Notebook Executions
+executions:
+  - notebook: "strategy_comparison.ipynb"
+    parameters:
+      symbol: "AAPL"
+      period: "2y"
+      strategies: ["sma", "rsi", "bollinger", "macd"]
+
+  - notebook: "strategy_comparison.ipynb"
+    parameters:
+      symbol: "MSFT"
+      period: "2y"
+      strategies: ["sma", "rsi", "bollinger", "macd"]
+
+  - notebook: "portfolio_optimization.ipynb"
+    parameters:
+      symbols: ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
+      period: "2y"
+      risk_free_rate: 0.05
+
+  - notebook: "ml_prediction.ipynb"
+    parameters:
+      symbol: "SPY"
+      period: "3y"
+      horizon: 5
+      task: "classification"
+
+# Batch Execution Configuration
+batch:
+  parallel: false
+  continue_on_error: true
+  collect_outputs: true
+
+# Output Configuration
+output:
+  save_notebooks: true
+  generate_summary: true
+  export_format: "html"

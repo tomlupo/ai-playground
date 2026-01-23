@@ -475,19 +475,177 @@ class ResearchPipeline:
         print("\n" + "=" * 70)
 
 
-def run_pipeline(config_path: str | Path, verbose: bool = True) -> PipelineResult:
+class CachedResearchPipeline(ResearchPipeline):
+    """
+    Research pipeline with caching support.
+
+    Caches expensive operations:
+    - Data fetching
+    - Indicator calculations
+    - Portfolio optimization
+    """
+
+    def __init__(
+        self,
+        config: PipelineConfig,
+        verbose: bool = True,
+        cache_enabled: bool = True,
+    ):
+        super().__init__(config, verbose)
+        self.cache_enabled = cache_enabled
+
+        if cache_enabled:
+            from quant_research.caching import DataCache, IndicatorCache, CacheManager
+
+            self.data_cache = DataCache()
+            self.indicator_cache = IndicatorCache()
+            self.cache_manager = CacheManager()
+
+    def _stage_data(self) -> None:
+        """Stage 1: Fetch price data with caching."""
+        if not self.cache_enabled:
+            return super()._stage_data()
+
+        self.log("Fetching price data (with caching)...", "DATA")
+
+        symbols = self.config.data.get("symbols", [])
+        period = self.config.data.get("period", "1y")
+
+        for symbol in symbols:
+            # Check cache first
+            cached_data = self.data_cache.get(symbol)
+            if cached_data is not None and len(cached_data) > 0:
+                self.log(f"  {symbol}: Using cached data ({len(cached_data)} records)", "DATA")
+                self.result.price_data[symbol] = cached_data
+            else:
+                self.log(f"  Fetching {symbol}...", "DATA")
+                data = self.fetcher.get_stock_data(symbol, period=period)
+                if data is not None and not data.empty:
+                    self.result.price_data[symbol] = data
+                    self.data_cache.set(symbol, data)
+                    self.log(f"  {symbol}: {len(data)} records (cached)", "DATA")
+
+        # Combined close prices
+        if self.result.price_data:
+            self.result.combined_prices = self.fetcher.get_combined_close_prices(
+                list(self.result.price_data.keys()), period=period
+            )
+            self.log(
+                f"Combined data shape: {self.result.combined_prices.shape}", "DATA"
+            )
+
+    def _stage_indicators(self) -> None:
+        """Stage 2: Calculate technical indicators with caching."""
+        if not self.cache_enabled:
+            return super()._stage_indicators()
+
+        self.log("\nCalculating technical indicators (with caching)...", "INDICATORS")
+
+        ind_config = self.config.indicators
+
+        for symbol, data in self.result.price_data.items():
+            self.log(f"  Processing {symbol}...", "INDICATORS")
+            close = data["close"]
+            high = data["high"]
+            low = data["low"]
+
+            symbol_indicators: dict[str, pd.Series] = {}
+            cached_count = 0
+
+            # SMA with caching
+            if "sma" in ind_config:
+                for sma_conf in ind_config["sma"]:
+                    period = sma_conf.get("period", 20)
+                    cache_key = {"period": period}
+
+                    cached = self.indicator_cache.get(symbol, f"sma_{period}", cache_key)
+                    if cached is not None:
+                        symbol_indicators[f"sma_{period}"] = cached
+                        cached_count += 1
+                    else:
+                        result = self.indicators.sma(close, period)
+                        symbol_indicators[f"sma_{period}"] = result
+                        self.indicator_cache.set(symbol, f"sma_{period}", cache_key, result)
+
+            # EMA with caching
+            if "ema" in ind_config:
+                for ema_conf in ind_config["ema"]:
+                    period = ema_conf.get("period", 20)
+                    cache_key = {"period": period}
+
+                    cached = self.indicator_cache.get(symbol, f"ema_{period}", cache_key)
+                    if cached is not None:
+                        symbol_indicators[f"ema_{period}"] = cached
+                        cached_count += 1
+                    else:
+                        result = self.indicators.ema(close, period)
+                        symbol_indicators[f"ema_{period}"] = result
+                        self.indicator_cache.set(symbol, f"ema_{period}", cache_key, result)
+
+            # RSI
+            if "rsi" in ind_config:
+                period = ind_config["rsi"].get("period", 14)
+                symbol_indicators["rsi"] = self.indicators.rsi(close, period)
+
+            # MACD
+            if "macd" in ind_config:
+                macd_line, signal_line, histogram = self.indicators.macd(
+                    close,
+                    fast_period=ind_config["macd"].get("fast", 12),
+                    slow_period=ind_config["macd"].get("slow", 26),
+                    signal_period=ind_config["macd"].get("signal", 9),
+                )
+                symbol_indicators["macd"] = macd_line
+                symbol_indicators["macd_signal"] = signal_line
+                symbol_indicators["macd_histogram"] = histogram
+
+            # Bollinger Bands
+            if "bollinger" in ind_config:
+                upper, middle, lower = self.indicators.bollinger_bands(
+                    close,
+                    period=ind_config["bollinger"].get("period", 20),
+                    std_dev=ind_config["bollinger"].get("std_dev", 2),
+                )
+                symbol_indicators["bb_upper"] = upper
+                symbol_indicators["bb_middle"] = middle
+                symbol_indicators["bb_lower"] = lower
+
+            # ATR
+            if "atr" in ind_config:
+                period = ind_config["atr"].get("period", 14)
+                symbol_indicators["atr"] = self.indicators.atr(high, low, close, period)
+
+            # Volatility
+            if "volatility" in ind_config:
+                period = ind_config["volatility"].get("period", 20)
+                symbol_indicators["volatility"] = self.indicators.volatility(close, period)
+
+            self.result.indicators_data[symbol] = symbol_indicators
+            self.log(
+                f"  {symbol}: {len(symbol_indicators)} indicators ({cached_count} cached)",
+                "INDICATORS",
+            )
+
+
+def run_pipeline(config_path: str | Path, verbose: bool = True, use_cache: bool = True) -> PipelineResult:
     """
     Convenience function to run a pipeline from a config file.
 
     Args:
         config_path: Path to YAML configuration file
         verbose: Whether to print progress
+        use_cache: Whether to use caching
 
     Returns:
         PipelineResult with all results
     """
     config = PipelineConfig.from_yaml(config_path)
-    pipeline = ResearchPipeline(config, verbose=verbose)
+
+    if use_cache:
+        pipeline = CachedResearchPipeline(config, verbose=verbose)
+    else:
+        pipeline = ResearchPipeline(config, verbose=verbose)
+
     result = pipeline.run()
     pipeline.print_summary()
     return result
