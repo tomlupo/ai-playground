@@ -5,15 +5,18 @@ A modular, exchange-agnostic trading framework supporting:
 - Crypto (Binance)
 - Equity (Interactive Brokers)
 - Futures/Forex (OANDA)
+- Polish market (Bossa/GPW)
 - Paper trading with calibrated market simulation
 - Live data feeds with history storage
 - Historical data replay for backtesting
+- Account reconciliation and performance analytics
 
 Usage:
     from trading import TradingEngine, BinanceExchange, SimulatedExchange
     from trading.strategy import Strategy
     from trading.config import TradingConfig
     from trading.feeds import LiveFeed, HistoryStore, BacktestFeed
+    from trading.analytics import PerformanceAnalyzer, AccountReconciler
 """
 
 from trading.core.models import (
@@ -41,6 +44,7 @@ from trading.exchanges import (
     BinanceExchange,
     InteractiveBrokersExchange,
     OandaExchange,
+    BossaExchange,
 )
 from trading.simulator import SimulatedExchange, MarketSimulator
 from trading.strategy import Strategy, RiskManager
@@ -52,6 +56,12 @@ from trading.feeds import (
     SQLiteHistoryStore,
     DataReplayer,
     BacktestFeed,
+)
+from trading.analytics import (
+    AccountReconciler,
+    ReconciliationResult,
+    PerformanceAnalyzer,
+    PerformanceReport,
 )
 
 __version__ = "0.1.0"
@@ -80,6 +90,7 @@ __all__ = [
     "BinanceExchange",
     "InteractiveBrokersExchange",
     "OandaExchange",
+    "BossaExchange",
     # Simulator
     "SimulatedExchange",
     "MarketSimulator",
@@ -95,4 +106,9 @@ __all__ = [
     "SQLiteHistoryStore",
     "DataReplayer",
     "BacktestFeed",
+    # Analytics
+    "AccountReconciler",
+    "ReconciliationResult",
+    "PerformanceAnalyzer",
+    "PerformanceReport",
 ]
