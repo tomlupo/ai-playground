@@ -1,0 +1,1 @@
+build whatever user ask you (default: quant reserach) with techstack user wants (default python, uv packaga manager) using @https://github.com/EveryInc/compound-engineering-plugin. test if code works (actually run the code and verify results)
