@@ -6,11 +6,14 @@ A modular, exchange-agnostic trading framework supporting:
 - Equity (Interactive Brokers)
 - Futures/Forex (OANDA)
 - Paper trading with calibrated market simulation
+- Live data feeds with history storage
+- Historical data replay for backtesting
 
 Usage:
     from trading import TradingEngine, BinanceExchange, SimulatedExchange
     from trading.strategy import Strategy
     from trading.config import TradingConfig
+    from trading.feeds import LiveFeed, HistoryStore, BacktestFeed
 """
 
 from trading.core.models import (
@@ -30,6 +33,7 @@ from trading.core.enums import (
     PositionSide,
     TimeInForce,
     AssetClass,
+    DataResolution,
 )
 from trading.engine import TradingEngine
 from trading.exchanges import (
@@ -41,6 +45,14 @@ from trading.exchanges import (
 from trading.simulator import SimulatedExchange, MarketSimulator
 from trading.strategy import Strategy, RiskManager
 from trading.config import TradingConfig
+from trading.feeds import (
+    LiveFeed,
+    LiveFeedManager,
+    HistoryStore,
+    SQLiteHistoryStore,
+    DataReplayer,
+    BacktestFeed,
+)
 
 __version__ = "0.1.0"
 __all__ = [
@@ -60,6 +72,7 @@ __all__ = [
     "PositionSide",
     "TimeInForce",
     "AssetClass",
+    "DataResolution",
     # Engine
     "TradingEngine",
     # Exchanges
@@ -75,4 +88,11 @@ __all__ = [
     "RiskManager",
     # Config
     "TradingConfig",
+    # Feeds
+    "LiveFeed",
+    "LiveFeedManager",
+    "HistoryStore",
+    "SQLiteHistoryStore",
+    "DataReplayer",
+    "BacktestFeed",
 ]

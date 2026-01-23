@@ -5,14 +5,16 @@ Provides:
 - Exchange connection management
 - Strategy lifecycle management
 - Event coordination
+- Data feed management with history
 - Unified interface for all trading operations
 """
 
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional, Callable, Any
+from pathlib import Path
 
 from trading.core.models import Order, Position, Tick, OHLCV
 from trading.core.enums import OrderSide, OrderType, AssetClass, DataResolution
@@ -31,6 +33,10 @@ from trading.config.settings import (
     ExchangeType,
     load_config,
 )
+from trading.feeds.base import FeedConfig
+from trading.feeds.live import LiveFeed, LiveFeedManager
+from trading.feeds.history import HistoryStore, SQLiteHistoryStore
+from trading.feeds.replay import DataReplayer, ReplayConfig, BacktestFeed, ReplaySpeed
 
 
 class TradingEngine:
@@ -88,6 +94,11 @@ class TradingEngine:
         # Calibration data
         self._calibrators: dict[str, MarketCalibrator] = {}
         self._calibration_results: dict[str, CalibrationResult] = {}
+
+        # Data feeds
+        self._feed_manager: Optional[LiveFeedManager] = None
+        self._history_store: Optional[HistoryStore] = None
+        self._backtest_feed: Optional[BacktestFeed] = None
 
         # State
         self._running = False
@@ -647,3 +658,234 @@ class TradingEngine:
     def is_running(self) -> bool:
         """Check if engine is running."""
         return self._running
+
+    # ==================== Data Feeds ====================
+
+    def setup_history_store(
+        self,
+        store_type: str = "sqlite",
+        path: Optional[str] = None,
+    ) -> HistoryStore:
+        """
+        Setup historical data storage.
+
+        Args:
+            store_type: "sqlite", "csv", or "parquet"
+            path: Storage path (default: ./data/history)
+
+        Returns:
+            HistoryStore instance
+        """
+        path = path or "./data/history"
+
+        if store_type == "sqlite":
+            self._history_store = SQLiteHistoryStore(f"{path}/history.db")
+        elif store_type == "csv":
+            from trading.feeds.history import CSVHistoryStore
+            self._history_store = CSVHistoryStore(path)
+        elif store_type == "parquet":
+            from trading.feeds.history import ParquetHistoryStore
+            self._history_store = ParquetHistoryStore(path)
+        else:
+            raise ValueError(f"Unknown store type: {store_type}")
+
+        return self._history_store
+
+    def get_history_store(self) -> Optional[HistoryStore]:
+        """Get the history store."""
+        return self._history_store
+
+    def setup_live_feeds(self) -> LiveFeedManager:
+        """
+        Setup live data feed manager.
+
+        Automatically creates feeds for all configured exchanges.
+
+        Returns:
+            LiveFeedManager instance
+        """
+        self._feed_manager = LiveFeedManager()
+
+        for name, exchange in self._exchanges.items():
+            config = FeedConfig(
+                symbols=self.config.symbols if self.config else [],
+                subscribe_ticks=True,
+                subscribe_bars=True,
+                bar_resolutions=[DataResolution.MINUTE_1],
+                store_bars=self._history_store is not None,
+            )
+            feed = self._feed_manager.add_feed(name, exchange, config)
+
+            # Wire up history storage
+            if self._history_store:
+                feed.on_bar("*", lambda bar: self._history_store.store_bar(
+                    bar, DataResolution.MINUTE_1
+                ))
+
+        return self._feed_manager
+
+    def get_feed_manager(self) -> Optional[LiveFeedManager]:
+        """Get the live feed manager."""
+        return self._feed_manager
+
+    async def start_feeds(self, symbols: Optional[list[str]] = None) -> None:
+        """
+        Start live data feeds.
+
+        Args:
+            symbols: Symbols to subscribe (uses config if None)
+        """
+        if not self._feed_manager:
+            self.setup_live_feeds()
+
+        await self._feed_manager.connect_all()
+
+        symbols = symbols or (self.config.symbols if self.config else [])
+        if symbols:
+            # Subscribe on default exchange
+            default = self._default_exchange
+            if default:
+                await self._feed_manager.get_feed(default).subscribe(symbols)
+
+    async def stop_feeds(self) -> None:
+        """Stop all live data feeds."""
+        if self._feed_manager:
+            await self._feed_manager.disconnect_all()
+
+    # ==================== Historical Data ====================
+
+    async def fetch_history(
+        self,
+        symbol: str,
+        resolution: DataResolution,
+        start: datetime,
+        end: Optional[datetime] = None,
+        exchange_name: Optional[str] = None,
+        store: bool = True,
+    ) -> list[OHLCV]:
+        """
+        Fetch historical data from exchange and optionally store it.
+
+        Args:
+            symbol: Trading symbol
+            resolution: Data resolution
+            start: Start datetime
+            end: End datetime (default: now)
+            exchange_name: Source exchange
+            store: Whether to store in history store
+
+        Returns:
+            List of OHLCV bars
+        """
+        exchange = self.get_exchange(exchange_name)
+        bars = await exchange.get_historical_bars(symbol, resolution, start, end)
+
+        if store and self._history_store and bars:
+            self._history_store.store_bars(bars, resolution)
+
+        return bars
+
+    def get_history(
+        self,
+        symbol: str,
+        resolution: DataResolution,
+        start: datetime,
+        end: Optional[datetime] = None,
+        limit: Optional[int] = None,
+    ) -> list[OHLCV]:
+        """
+        Get historical data from local store.
+
+        Args:
+            symbol: Trading symbol
+            resolution: Data resolution
+            start: Start datetime
+            end: End datetime
+            limit: Maximum bars to return
+
+        Returns:
+            List of OHLCV bars
+        """
+        if not self._history_store:
+            raise ValueError("History store not configured")
+
+        return self._history_store.get_bars(symbol, resolution, start, end, limit)
+
+    # ==================== Backtesting ====================
+
+    def setup_backtest(
+        self,
+        start: datetime,
+        end: Optional[datetime] = None,
+        symbols: Optional[list[str]] = None,
+        speed: ReplaySpeed = ReplaySpeed.FAST,
+    ) -> BacktestFeed:
+        """
+        Setup backtesting with historical data.
+
+        Args:
+            start: Backtest start time
+            end: Backtest end time
+            symbols: Symbols to include
+            speed: Replay speed
+
+        Returns:
+            BacktestFeed instance
+        """
+        if not self._history_store:
+            raise ValueError("History store not configured")
+
+        config = FeedConfig(
+            symbols=symbols or (self.config.symbols if self.config else []),
+            bar_resolutions=[DataResolution.MINUTE_1],
+        )
+
+        self._backtest_feed = BacktestFeed(self._history_store, config)
+        self._backtest_feed.set_time_range(start, end)
+        self._backtest_feed.set_speed(speed)
+
+        return self._backtest_feed
+
+    async def run_backtest(
+        self,
+        strategy: Strategy,
+        start: datetime,
+        end: Optional[datetime] = None,
+        symbols: Optional[list[str]] = None,
+    ) -> dict:
+        """
+        Run a backtest with a strategy.
+
+        Args:
+            strategy: Strategy to test
+            start: Backtest start
+            end: Backtest end
+            symbols: Symbols to trade
+
+        Returns:
+            Dict with backtest results
+        """
+        feed = self.setup_backtest(start, end, symbols)
+
+        # Wire strategy to feed
+        feed.on_bar("*", lambda bar: strategy.on_bar(bar))
+
+        await feed.connect()
+        await strategy.start()
+
+        try:
+            await feed.run()
+        finally:
+            await strategy.stop()
+
+        # Return results
+        metrics = strategy.get_metrics()
+        return {
+            "total_return": float(metrics.total_return),
+            "total_return_pct": metrics.total_return_pct,
+            "sharpe_ratio": metrics.sharpe_ratio,
+            "max_drawdown": metrics.max_drawdown,
+            "win_rate": metrics.win_rate,
+            "total_trades": metrics.total_trades,
+            "profit_factor": metrics.profit_factor,
+        }
