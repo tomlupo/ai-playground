@@ -1,0 +1,79 @@
+# Jimek Process Orchestrator Configuration
+# Copy this file to config.yaml and customize for your environment
+
+# Scheduler Configuration
+scheduler:
+  use_async: true
+  max_workers: 10
+  max_processes: 4
+  # Persistent job store (optional) - SQLite or PostgreSQL
+  # jobstore_url: "sqlite:///jimek_jobs.db"
+  # jobstore_url: "postgresql://user:pass@localhost/jimek"
+  timezone: "UTC"
+  misfire_grace_time: 60
+  coalesce: true
+
+# Notification Channels
+notifications:
+  # Telegram Bot Notifications
+  telegram:
+    enabled: false
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+    parse_mode: "HTML"
+
+  # Slack Notifications
+  slack:
+    enabled: false
+    # Option 1: Incoming Webhook (simpler)
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    # Option 2: Bot Token (more features)
+    # bot_token: "${SLACK_BOT_TOKEN}"
+    # channel: "#alerts"
+
+  # Email Notifications (SMTP)
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    username: "${SMTP_USERNAME}"
+    password: "${SMTP_PASSWORD}"
+    from_address: "jimek@example.com"
+    to_addresses:
+      - "alerts@example.com"
+      - "team@example.com"
+    use_tls: true
+
+  # WhatsApp Notifications (via Twilio)
+  whatsapp:
+    enabled: false
+    account_sid: "${TWILIO_ACCOUNT_SID}"
+    auth_token: "${TWILIO_AUTH_TOKEN}"
+    from_number: "whatsapp:+14155238886"  # Twilio sandbox number
+    to_number: "whatsapp:+1234567890"
+
+  # ntfy.sh Push Notifications
+  ntfy:
+    enabled: false
+    topic: "my-jimek-alerts"
+    server_url: "https://ntfy.sh"  # Or self-hosted: https://ntfy.example.com
+    # token: "${NTFY_TOKEN}"  # For private topics
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  # file: "/var/log/jimek/jimek.log"
+
+# Luigi Workflow Configuration
+luigi:
+  workers: 2
+  local_scheduler: true
+  output_base: "./output"
+  log_level: "INFO"
+
+# Custom Application Settings
+custom:
+  # Add your application-specific settings here
+  # api_url: "https://api.example.com"
+  # database_url: "${DATABASE_URL}"
