@@ -5,17 +5,21 @@ Main Jimek orchestrator - ties together scheduling, notifications, and workflows
 from __future__ import annotations
 
 import asyncio
-import logging
 import signal
-import sys
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
 
 from jimek.config.settings import JimekConfig, load_config
 from jimek.core.job import Job, JobResult, JobStatus
 from jimek.core.scheduler import JimekScheduler
+from jimek.logging import (
+    LogConfig,
+    get_logger,
+    setup_logging,
+    execution_logger,
+)
 
-logger = logging.getLogger(__name__)
+logger = get_logger("orchestrator")
 
 
 class Jimek:
@@ -69,25 +73,31 @@ class Jimek:
 
     def _setup_logging(self) -> None:
         """Configure logging based on config."""
-        log_config = self.config.logging
-        logging.basicConfig(
-            level=getattr(logging, log_config.level.upper()),
-            format=log_config.format,
-            handlers=[
-                logging.StreamHandler(sys.stdout),
-            ],
+        log_cfg = self.config.logging
+
+        # Create enhanced log config
+        enhanced_config = LogConfig(
+            level=log_cfg.level,
+            format=log_cfg.format,
+            console_enabled=True,
+            console_colors=True,
+            file_enabled=log_cfg.file is not None,
+            file_path=log_cfg.file,
         )
 
-        if log_config.file:
-            file_handler = logging.FileHandler(log_config.file)
-            file_handler.setFormatter(logging.Formatter(log_config.format))
-            logging.getLogger().addHandler(file_handler)
+        setup_logging(enhanced_config)
+        logger.info("Logging configured", extra={
+            "level": log_cfg.level,
+            "file": log_cfg.file,
+        })
 
     def _setup_notifiers(self) -> None:
         """Initialize notification adapters based on config."""
         notif_config = self.config.notifications
+        enabled_channels = []
 
         if notif_config.telegram.enabled:
+            enabled_channels.append("telegram")
             from jimek.notifications.telegram import TelegramNotifier
 
             self._scheduler.add_notifier(
@@ -98,6 +108,7 @@ class Jimek:
             )
 
         if notif_config.slack.enabled:
+            enabled_channels.append("slack")
             from jimek.notifications.slack import SlackNotifier
 
             self._scheduler.add_notifier(
@@ -108,6 +119,7 @@ class Jimek:
             )
 
         if notif_config.email.enabled:
+            enabled_channels.append("email")
             from jimek.notifications.email import EmailNotifier
 
             self._scheduler.add_notifier(
@@ -123,6 +135,7 @@ class Jimek:
             )
 
         if notif_config.whatsapp.enabled:
+            enabled_channels.append("whatsapp")
             from jimek.notifications.whatsapp import WhatsAppNotifier
 
             self._scheduler.add_notifier(
@@ -135,6 +148,7 @@ class Jimek:
             )
 
         if notif_config.ntfy.enabled:
+            enabled_channels.append("ntfy")
             from jimek.notifications.ntfy import NtfyNotifier
 
             self._scheduler.add_notifier(
@@ -144,6 +158,11 @@ class Jimek:
                     token=notif_config.ntfy.token,
                 )
             )
+
+        if enabled_channels:
+            logger.info(f"Notification channels configured: {', '.join(enabled_channels)}")
+        else:
+            logger.debug("No notification channels enabled")
 
     def job(
         self,
@@ -209,17 +228,30 @@ class Jimek:
             )
             self._scheduler.add_job(job)
             func._jimek_job = job  # Attach job reference to function
+            logger.debug(f"Registered job via decorator: {job.name} (id={job.id})")
             return func
 
         return decorator
 
     def add_job(self, job: Job) -> str:
         """Add a job programmatically."""
+        logger.info(f"Adding job: {job.name}", extra={
+            "job_id": job.id,
+            "job_name": job.name,
+            "schedule_type": job.schedule_type,
+            "cron": job.cron,
+        })
         return self._scheduler.add_job(job)
 
     def remove_job(self, job_id: str) -> bool:
         """Remove a job by ID."""
-        return self._scheduler.remove_job(job_id)
+        logger.info(f"Removing job: {job_id}")
+        result = self._scheduler.remove_job(job_id)
+        if result:
+            logger.debug(f"Job removed successfully: {job_id}")
+        else:
+            logger.warning(f"Job not found for removal: {job_id}")
+        return result
 
     def get_job(self, job_id: str) -> Optional[Job]:
         """Get a job by ID."""
@@ -231,11 +263,37 @@ class Jimek:
 
     def run_job(self, job_id: str) -> Optional[JobResult]:
         """Run a specific job immediately."""
-        return self._scheduler.run_job_now(job_id)
+        job = self._scheduler.get_job(job_id)
+        if job:
+            logger.info(f"Running job immediately: {job.name}", extra={"job_id": job_id})
+        result = self._scheduler.run_job_now(job_id)
+        if result:
+            logger.info(
+                f"Job completed: {job.name if job else job_id}",
+                extra={
+                    "job_id": job_id,
+                    "status": result.status.value,
+                    "duration_seconds": result.duration_seconds,
+                },
+            )
+        return result
 
     async def run_job_async(self, job_id: str) -> Optional[JobResult]:
         """Run a specific job immediately (async)."""
-        return await self._scheduler.run_job_now_async(job_id)
+        job = self._scheduler.get_job(job_id)
+        if job:
+            logger.info(f"Running job immediately (async): {job.name}", extra={"job_id": job_id})
+        result = await self._scheduler.run_job_now_async(job_id)
+        if result:
+            logger.info(
+                f"Job completed (async): {job.name if job else job_id}",
+                extra={
+                    "job_id": job_id,
+                    "status": result.status.value,
+                    "duration_seconds": result.duration_seconds,
+                },
+            )
+        return result
 
     def get_status(self) -> dict[str, Any]:
         """Get orchestrator status."""
@@ -266,18 +324,29 @@ class Jimek:
         Args:
             block: Whether to block the main thread
         """
-        logger.info("Starting Jimek orchestrator...")
+        job_count = len(self._scheduler.get_jobs())
+        logger.info(
+            "Starting Jimek orchestrator",
+            extra={
+                "jobs_registered": job_count,
+                "timezone": self.config.scheduler.timezone,
+                "async_mode": self.config.scheduler.use_async,
+                "blocking": block,
+            },
+        )
         self._scheduler.start()
+        logger.info(f"Scheduler started with {job_count} job(s)")
 
         if block:
             self._setup_signal_handlers()
+            logger.debug("Signal handlers registered, waiting for events...")
             try:
                 if self.config.scheduler.use_async:
                     asyncio.get_event_loop().run_forever()
                 else:
                     signal.pause()
             except (KeyboardInterrupt, SystemExit):
-                pass
+                logger.info("Interrupt received")
             finally:
                 self.shutdown()
 
@@ -335,16 +404,35 @@ class Jimek:
             True if successful
         """
         import luigi
+        from jimek.logging import log_execution_time
 
         task_params = task_params or {}
+        task_name = task_class.__name__
+
+        logger.info(
+            f"Starting Luigi pipeline: {task_name}",
+            extra={
+                "task_class": task_name,
+                "workers": workers,
+                "local_scheduler": local_scheduler,
+                "params": task_params,
+            },
+        )
+
         task = task_class(**task_params)
 
-        success = luigi.build(
-            [task],
-            workers=workers,
-            local_scheduler=local_scheduler,
-            log_level="INFO",
-        )
+        with log_execution_time(logger, f"Luigi pipeline '{task_name}'"):
+            success = luigi.build(
+                [task],
+                workers=workers,
+                local_scheduler=local_scheduler,
+                log_level=self.config.luigi.log_level,
+            )
+
+        if success:
+            logger.info(f"Luigi pipeline completed successfully: {task_name}")
+        else:
+            logger.error(f"Luigi pipeline failed: {task_name}")
 
         return success
 

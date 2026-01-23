@@ -11,6 +11,14 @@ __author__ = "AI Playground"
 from jimek.core.orchestrator import Jimek
 from jimek.core.scheduler import JimekScheduler
 from jimek.core.job import Job, JobStatus, JobResult
+from jimek.logging import (
+    setup_logging,
+    get_logger,
+    get_job_logger,
+    LogConfig,
+    log_execution_time,
+    log_function_call,
+)
 
 __all__ = [
     "Jimek",
@@ -18,4 +26,11 @@ __all__ = [
     "Job",
     "JobStatus",
     "JobResult",
+    # Logging utilities
+    "setup_logging",
+    "get_logger",
+    "get_job_logger",
+    "LogConfig",
+    "log_execution_time",
+    "log_function_call",
 ]

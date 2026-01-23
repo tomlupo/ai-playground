@@ -12,7 +12,6 @@ Provides a high-level wrapper around APScheduler with support for:
 from __future__ import annotations
 
 import asyncio
-import logging
 from datetime import datetime
 from typing import Any, Callable, Optional, TYPE_CHECKING
 
@@ -31,11 +30,12 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from jimek.core.job import Job, JobResult, JobStatus
+from jimek.logging import get_logger, get_job_logger, execution_logger
 
 if TYPE_CHECKING:
     from jimek.notifications.base import NotificationAdapter
 
-logger = logging.getLogger(__name__)
+logger = get_logger("scheduler")
 
 
 class JimekScheduler:
@@ -116,6 +116,17 @@ class JimekScheduler:
         self._scheduler.add_listener(self._on_job_added, EVENT_JOB_ADDED)
         self._scheduler.add_listener(self._on_job_removed, EVENT_JOB_REMOVED)
 
+        logger.debug(
+            "Scheduler initialized",
+            extra={
+                "async_mode": use_async,
+                "max_workers": max_workers,
+                "max_processes": max_processes,
+                "timezone": timezone,
+                "persistent_store": jobstore_url is not None,
+            },
+        )
+
     def add_notifier(self, notifier: NotificationAdapter) -> None:
         """Add a notification adapter."""
         self._notifiers.append(notifier)
@@ -195,12 +206,20 @@ class JimekScheduler:
 
     def _execute_job(self, job: Job) -> JobResult:
         """Execute a job with retry logic."""
+        import uuid
+
+        execution_id = str(uuid.uuid4())[:8]
+        job_logger = get_job_logger(job.id, job.name)
+
         # Check dependencies
         if job.depends_on:
             for dep_id in job.depends_on:
                 dep_job = self._jobs.get(dep_id)
                 if dep_job and dep_job.last_result:
                     if not dep_job.last_result.is_success:
+                        job_logger.warning(
+                            f"Skipping due to failed dependency: {dep_id}"
+                        )
                         result = JobResult(
                             job_id=job.id,
                             status=JobStatus.SKIPPED,
@@ -208,6 +227,14 @@ class JimekScheduler:
                         )
                         self._results[job.id].append(result)
                         return result
+
+        # Log execution start
+        execution_logger.start_execution(
+            execution_id=execution_id,
+            job_id=job.id,
+            job_name=job.name,
+            max_retries=job.max_retries,
+        )
 
         # Notify on start
         if job.notify_on_start:
@@ -220,21 +247,44 @@ class JimekScheduler:
         # Execute with retries
         result = None
         for attempt in range(job.max_retries + 1):
+            if attempt > 0:
+                execution_logger.log_progress(
+                    execution_id=execution_id,
+                    message=f"Retry attempt {attempt}/{job.max_retries}",
+                    progress=attempt / job.max_retries,
+                )
+
             result = job.execute()
             result.retry_count = attempt
 
             if result.is_success:
+                job_logger.info(
+                    f"Completed successfully in {result.duration_seconds:.3f}s"
+                )
                 break
 
             if attempt < job.max_retries:
                 import time
 
                 delay = job.retry_delay_seconds * (2**attempt)  # Exponential backoff
-                logger.warning(
-                    f"Job {job.name} failed, retrying in {delay}s "
-                    f"(attempt {attempt + 1}/{job.max_retries})"
+                job_logger.warning(
+                    f"Failed (attempt {attempt + 1}/{job.max_retries + 1}), "
+                    f"retrying in {delay}s: {result.error}"
                 )
                 time.sleep(delay)
+            else:
+                job_logger.error(
+                    f"Failed after {attempt + 1} attempts: {result.error}"
+                )
+
+        # Log execution end
+        execution_logger.end_execution(
+            execution_id=execution_id,
+            success=result.is_success,
+            error=result.error,
+            duration_seconds=result.duration_seconds,
+            retry_count=result.retry_count,
+        )
 
         # Store result
         self._results[job.id].append(result)

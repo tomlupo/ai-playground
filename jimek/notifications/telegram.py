@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Optional
 
 import httpx
 
 from jimek.notifications.base import NotificationAdapter, NotificationMessage
+from jimek.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("notifications.telegram")
 
 
 class TelegramNotifier(NotificationAdapter):
@@ -52,6 +52,7 @@ class TelegramNotifier(NotificationAdapter):
         """Send notification via Telegram."""
         try:
             text = message.format_html() if self.parse_mode == "HTML" else message.format_markdown()
+            logger.debug(f"Sending Telegram message to chat {self.chat_id}")
 
             with httpx.Client(timeout=self.timeout) as client:
                 response = client.post(
@@ -67,20 +68,21 @@ class TelegramNotifier(NotificationAdapter):
                 result = response.json()
 
                 if result.get("ok"):
-                    logger.info(f"Telegram notification sent: {message.title}")
+                    self._log_send(message, success=True)
                     return True
                 else:
-                    logger.error(f"Telegram API error: {result}")
+                    self._log_send(message, success=False, error=str(result))
                     return False
 
         except Exception as e:
-            logger.error(f"Failed to send Telegram notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     async def send_async(self, message: NotificationMessage) -> bool:
         """Send notification via Telegram asynchronously."""
         try:
             text = message.format_html() if self.parse_mode == "HTML" else message.format_markdown()
+            logger.debug(f"Sending Telegram message (async) to chat {self.chat_id}")
 
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
@@ -96,14 +98,14 @@ class TelegramNotifier(NotificationAdapter):
                 result = response.json()
 
                 if result.get("ok"):
-                    logger.info(f"Telegram notification sent: {message.title}")
+                    self._log_send(message, success=True)
                     return True
                 else:
-                    logger.error(f"Telegram API error: {result}")
+                    self._log_send(message, success=False, error=str(result))
                     return False
 
         except Exception as e:
-            logger.error(f"Failed to send Telegram notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     def send_document(

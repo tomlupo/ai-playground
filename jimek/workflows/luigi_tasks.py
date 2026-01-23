@@ -8,7 +8,6 @@ that integrate with the Jimek orchestrator.
 from __future__ import annotations
 
 import json
-import logging
 import os
 from abc import abstractmethod
 from datetime import date, datetime, timedelta
@@ -19,7 +18,9 @@ import luigi
 from luigi import LocalTarget, Task, WrapperTask
 from luigi.util import requires
 
-logger = logging.getLogger(__name__)
+from jimek.logging import get_logger, log_execution_time
+
+logger = get_logger("workflows.luigi")
 
 
 class JimekTask(Task):
@@ -58,10 +59,18 @@ class JimekTask(Task):
     def run(self):
         """Execute the task with timing and metadata."""
         self._start_time = datetime.now()
-        logger.info(f"Starting task: {self.task_name}")
+        logger.info(
+            f"Starting Luigi task: {self.task_name}",
+            extra={
+                "task_name": self.task_name,
+                "task_namespace": self.task_namespace,
+                "output_dir": str(self.output_dir),
+            },
+        )
 
         try:
-            result = self.execute()
+            with log_execution_time(logger, f"Luigi task '{self.task_name}'"):
+                result = self.execute()
 
             self._end_time = datetime.now()
             duration = (self._end_time - self._start_time).total_seconds()
@@ -79,11 +88,26 @@ class JimekTask(Task):
             with self.output().open("w") as f:
                 json.dump(metadata, f, indent=2)
 
-            logger.info(f"Completed task: {self.task_name} in {duration:.2f}s")
+            logger.info(
+                f"Completed Luigi task: {self.task_name}",
+                extra={
+                    "task_name": self.task_name,
+                    "duration_seconds": duration,
+                    "output_path": str(self.output().path),
+                },
+            )
 
         except Exception as e:
             self._end_time = datetime.now()
-            logger.error(f"Task failed: {self.task_name} - {e}")
+            duration = (self._end_time - self._start_time).total_seconds() if self._start_time else 0
+            logger.error(
+                f"Luigi task failed: {self.task_name}",
+                extra={
+                    "task_name": self.task_name,
+                    "duration_seconds": duration,
+                    "error": str(e),
+                },
+            )
             raise
 
     @abstractmethod

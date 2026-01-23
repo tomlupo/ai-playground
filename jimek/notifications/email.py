@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import logging
 import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
 
-import httpx
-
 from jimek.notifications.base import NotificationAdapter, NotificationMessage
+from jimek.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("notifications.email")
 
 
 class EmailNotifier(NotificationAdapter):
@@ -116,6 +114,10 @@ class EmailNotifier(NotificationAdapter):
             logger.warning("No email recipients configured")
             return False
 
+        logger.debug(
+            f"Sending email to {len(self.to_addrs)} recipient(s) via {self.smtp_host}:{self.smtp_port}"
+        )
+
         try:
             msg = self._build_email(message)
 
@@ -136,11 +138,11 @@ class EmailNotifier(NotificationAdapter):
                         server.login(self.username, self.password)
                     server.sendmail(self.from_addr, self.to_addrs, msg.as_string())
 
-            logger.info(f"Email notification sent: {message.title}")
+            self._log_send(message, success=True)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to send email notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     async def send_async(self, message: NotificationMessage) -> bool:

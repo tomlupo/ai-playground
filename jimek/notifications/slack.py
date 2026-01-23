@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Optional
 
 import httpx
 
 from jimek.notifications.base import NotificationAdapter, NotificationMessage
+from jimek.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("notifications.slack")
 
 
 class SlackNotifier(NotificationAdapter):
@@ -115,13 +115,17 @@ class SlackNotifier(NotificationAdapter):
 
     def send(self, message: NotificationMessage) -> bool:
         """Send notification via Slack."""
+        method = "webhook" if self.webhook_url else "api"
+        logger.debug(f"Sending Slack notification via {method}")
         try:
             if self.webhook_url:
-                return self._send_webhook(message)
+                result = self._send_webhook(message)
             else:
-                return self._send_api(message)
+                result = self._send_api(message)
+            self._log_send(message, success=result)
+            return result
         except Exception as e:
-            logger.error(f"Failed to send Slack notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     def _send_webhook(self, message: NotificationMessage) -> bool:
@@ -136,7 +140,6 @@ class SlackNotifier(NotificationAdapter):
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(self.webhook_url, json=payload)
             response.raise_for_status()
-            logger.info(f"Slack notification sent: {message.title}")
             return True
 
     def _send_api(self, message: NotificationMessage) -> bool:
@@ -159,21 +162,24 @@ class SlackNotifier(NotificationAdapter):
             result = response.json()
 
             if result.get("ok"):
-                logger.info(f"Slack notification sent: {message.title}")
                 return True
             else:
-                logger.error(f"Slack API error: {result.get('error')}")
+                logger.warning(f"Slack API error: {result.get('error')}")
                 return False
 
     async def send_async(self, message: NotificationMessage) -> bool:
         """Send notification via Slack asynchronously."""
+        method = "webhook" if self.webhook_url else "api"
+        logger.debug(f"Sending Slack notification (async) via {method}")
         try:
             if self.webhook_url:
-                return await self._send_webhook_async(message)
+                result = await self._send_webhook_async(message)
             else:
-                return await self._send_api_async(message)
+                result = await self._send_api_async(message)
+            self._log_send(message, success=result)
+            return result
         except Exception as e:
-            logger.error(f"Failed to send Slack notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     async def _send_webhook_async(self, message: NotificationMessage) -> bool:
@@ -188,7 +194,6 @@ class SlackNotifier(NotificationAdapter):
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(self.webhook_url, json=payload)
             response.raise_for_status()
-            logger.info(f"Slack notification sent: {message.title}")
             return True
 
     async def _send_api_async(self, message: NotificationMessage) -> bool:
@@ -211,8 +216,7 @@ class SlackNotifier(NotificationAdapter):
             result = response.json()
 
             if result.get("ok"):
-                logger.info(f"Slack notification sent: {message.title}")
                 return True
             else:
-                logger.error(f"Slack API error: {result.get('error')}")
+                logger.warning(f"Slack API error: {result.get('error')}")
                 return False

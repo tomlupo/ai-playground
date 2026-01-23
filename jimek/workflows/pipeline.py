@@ -8,7 +8,6 @@ with Jimek orchestrator integration.
 from __future__ import annotations
 
 import json
-import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import Enum
@@ -19,8 +18,9 @@ import luigi
 from luigi import LocalTarget
 
 from jimek.workflows.luigi_tasks import JimekTask, JimekWrapperTask
+from jimek.logging import get_logger, log_execution_time
 
-logger = logging.getLogger(__name__)
+logger = get_logger("workflows.pipeline")
 
 
 class StageStatus(Enum):
@@ -286,21 +286,38 @@ class Pipeline:
             True if successful
         """
         run_date = run_date or date.today()
-        logger.info(f"Running pipeline '{self.name}' for {run_date}")
+        stage_count = len([s for s in self.stages if s.enabled])
+
+        logger.info(
+            f"Starting pipeline: {self.name}",
+            extra={
+                "pipeline": self.name,
+                "run_date": run_date.isoformat(),
+                "stages": stage_count,
+                "workers": workers,
+            },
+        )
 
         pipeline_task = self._build_luigi_pipeline(run_date)
 
-        success = luigi.build(
-            [pipeline_task],
-            workers=workers,
-            local_scheduler=local_scheduler,
-            log_level=log_level,
-        )
+        with log_execution_time(logger, f"Pipeline '{self.name}'"):
+            success = luigi.build(
+                [pipeline_task],
+                workers=workers,
+                local_scheduler=local_scheduler,
+                log_level=log_level,
+            )
 
         if success:
-            logger.info(f"Pipeline '{self.name}' completed successfully")
+            logger.info(
+                f"Pipeline completed successfully: {self.name}",
+                extra={"pipeline": self.name, "status": "success"},
+            )
         else:
-            logger.error(f"Pipeline '{self.name}' failed")
+            logger.error(
+                f"Pipeline failed: {self.name}",
+                extra={"pipeline": self.name, "status": "failed"},
+            )
 
         return success
 

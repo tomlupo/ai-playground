@@ -7,6 +7,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Optional
 
+from jimek.logging import get_logger
+
+logger = get_logger("notifications")
+
 
 @dataclass
 class NotificationMessage:
@@ -101,12 +105,32 @@ class NotificationAdapter(ABC):
 
     def test_connection(self) -> bool:
         """Test the notification connection."""
+        logger.info(f"Testing connection for {self.channel_name}")
         try:
             test_msg = NotificationMessage(
                 title="Jimek Test",
                 message="This is a test notification from Jimek orchestrator.",
                 level="info",
             )
-            return self.send(test_msg)
-        except Exception:
+            result = self.send(test_msg)
+            if result:
+                logger.info(f"Connection test successful for {self.channel_name}")
+            else:
+                logger.warning(f"Connection test failed for {self.channel_name}")
+            return result
+        except Exception as e:
+            logger.error(f"Connection test error for {self.channel_name}: {e}")
             return False
+
+    def _log_send(self, message: NotificationMessage, success: bool, error: Optional[str] = None) -> None:
+        """Log notification send attempt."""
+        extra = {
+            "channel": self.channel_name,
+            "level": message.level,
+            "job_id": message.job_id,
+            "job_name": message.job_name,
+        }
+        if success:
+            logger.debug(f"Notification sent via {self.channel_name}: {message.title}", extra=extra)
+        else:
+            logger.error(f"Failed to send notification via {self.channel_name}: {error}", extra=extra)

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Optional
 
 import httpx
 
 from jimek.notifications.base import NotificationAdapter, NotificationMessage
+from jimek.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("notifications.whatsapp")
 
 
 class WhatsAppNotifier(NotificationAdapter):
@@ -57,6 +57,7 @@ class WhatsAppNotifier(NotificationAdapter):
 
     def send(self, message: NotificationMessage) -> bool:
         """Send notification via WhatsApp."""
+        logger.debug(f"Sending WhatsApp message via Twilio to {self.to_number}")
         try:
             body = message.format_plain()
 
@@ -74,18 +75,19 @@ class WhatsAppNotifier(NotificationAdapter):
                 result = response.json()
 
                 if result.get("sid"):
-                    logger.info(f"WhatsApp notification sent: {message.title}")
+                    self._log_send(message, success=True)
                     return True
                 else:
-                    logger.error(f"WhatsApp API error: {result}")
+                    self._log_send(message, success=False, error=str(result))
                     return False
 
         except Exception as e:
-            logger.error(f"Failed to send WhatsApp notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     async def send_async(self, message: NotificationMessage) -> bool:
         """Send notification via WhatsApp asynchronously."""
+        logger.debug(f"Sending WhatsApp message (async) via Twilio to {self.to_number}")
         try:
             body = message.format_plain()
 
@@ -103,14 +105,14 @@ class WhatsAppNotifier(NotificationAdapter):
                 result = response.json()
 
                 if result.get("sid"):
-                    logger.info(f"WhatsApp notification sent: {message.title}")
+                    self._log_send(message, success=True)
                     return True
                 else:
-                    logger.error(f"WhatsApp API error: {result}")
+                    self._log_send(message, success=False, error=str(result))
                     return False
 
         except Exception as e:
-            logger.error(f"Failed to send WhatsApp notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
 
@@ -152,6 +154,7 @@ class WhatsAppCloudNotifier(NotificationAdapter):
 
     def send(self, message: NotificationMessage) -> bool:
         """Send notification via WhatsApp Cloud API."""
+        logger.debug(f"Sending WhatsApp message via Meta Cloud API to {self.recipient_number}")
         try:
             body = message.format_plain()
 
@@ -173,18 +176,19 @@ class WhatsAppCloudNotifier(NotificationAdapter):
                 result = response.json()
 
                 if result.get("messages"):
-                    logger.info(f"WhatsApp Cloud notification sent: {message.title}")
+                    self._log_send(message, success=True)
                     return True
                 else:
-                    logger.error(f"WhatsApp Cloud API error: {result}")
+                    self._log_send(message, success=False, error=str(result))
                     return False
 
         except Exception as e:
-            logger.error(f"Failed to send WhatsApp Cloud notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     async def send_async(self, message: NotificationMessage) -> bool:
         """Send notification via WhatsApp Cloud API asynchronously."""
+        logger.debug(f"Sending WhatsApp message (async) via Meta Cloud API to {self.recipient_number}")
         try:
             body = message.format_plain()
 
@@ -206,12 +210,12 @@ class WhatsAppCloudNotifier(NotificationAdapter):
                 result = response.json()
 
                 if result.get("messages"):
-                    logger.info(f"WhatsApp Cloud notification sent: {message.title}")
+                    self._log_send(message, success=True)
                     return True
                 else:
-                    logger.error(f"WhatsApp Cloud API error: {result}")
+                    self._log_send(message, success=False, error=str(result))
                     return False
 
         except Exception as e:
-            logger.error(f"Failed to send WhatsApp Cloud notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False

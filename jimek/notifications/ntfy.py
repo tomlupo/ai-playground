@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Optional
 
 import httpx
 
 from jimek.notifications.base import NotificationAdapter, NotificationMessage
+from jimek.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("notifications.ntfy")
 
 
 class NtfyNotifier(NotificationAdapter):
@@ -78,6 +78,7 @@ class NtfyNotifier(NotificationAdapter):
 
     def send(self, message: NotificationMessage) -> bool:
         """Send notification via ntfy."""
+        logger.debug(f"Sending ntfy notification to topic '{self.topic}' on {self.server_url}")
         try:
             headers = {
                 "Title": message.title,
@@ -99,15 +100,16 @@ class NtfyNotifier(NotificationAdapter):
                     content=message.message,
                 )
                 response.raise_for_status()
-                logger.info(f"ntfy notification sent: {message.title}")
+                self._log_send(message, success=True)
                 return True
 
         except Exception as e:
-            logger.error(f"Failed to send ntfy notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     async def send_async(self, message: NotificationMessage) -> bool:
         """Send notification via ntfy asynchronously."""
+        logger.debug(f"Sending ntfy notification (async) to topic '{self.topic}' on {self.server_url}")
         try:
             headers = {
                 "Title": message.title,
@@ -128,11 +130,11 @@ class NtfyNotifier(NotificationAdapter):
                     content=message.message,
                 )
                 response.raise_for_status()
-                logger.info(f"ntfy notification sent: {message.title}")
+                self._log_send(message, success=True)
                 return True
 
         except Exception as e:
-            logger.error(f"Failed to send ntfy notification: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
 
     def send_with_actions(
@@ -185,9 +187,10 @@ class NtfyNotifier(NotificationAdapter):
                     content=message.message,
                 )
                 response.raise_for_status()
-                logger.info(f"ntfy notification with actions sent: {message.title}")
+                self._log_send(message, success=True)
+                logger.debug(f"ntfy notification with {len(actions)} action(s) sent")
                 return True
 
         except Exception as e:
-            logger.error(f"Failed to send ntfy notification with actions: {e}")
+            self._log_send(message, success=False, error=str(e))
             return False
