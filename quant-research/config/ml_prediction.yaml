@@ -1,0 +1,65 @@
+# Machine Learning Prediction Pipeline
+# Direction prediction using ML models
+
+name: "ML Direction Prediction"
+description: "Machine learning models for predicting 5-day price direction"
+
+# Data Configuration
+data:
+  symbols:
+    - AAPL
+    - MSFT
+    - GOOGL
+  period: "2y"
+  interval: "1d"
+
+# Technical Indicators Configuration
+indicators:
+  sma:
+    - period: 20
+    - period: 50
+  ema:
+    - period: 12
+    - period: 26
+  rsi:
+    period: 14
+  macd:
+    fast: 12
+    slow: 26
+    signal: 9
+  bollinger:
+    period: 20
+    std_dev: 2
+  atr:
+    period: 14
+  volatility:
+    period: 20
+
+# ML Configuration
+ml:
+  task: classification  # classification or regression
+  horizon: 5            # prediction horizon in days
+  models:
+    - logistic
+    - random_forest
+    - gradient_boosting
+  cv_splits: 5
+  feature_engineering:
+    lookback_periods: [5, 10, 20, 60]
+
+# Portfolio Configuration (for signal-based trading)
+portfolio:
+  initial_capital: 100000
+  risk_free_rate: 0.05
+
+# Analysis Configuration
+analysis:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+  feature_importance: true
+  export:
+    format: "html"
+    path: "reports/ml_report.html"

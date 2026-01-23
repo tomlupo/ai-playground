@@ -1,16 +1,22 @@
 [project]
 name = "quant-research"
-version = "0.1.0"
-description = "A Python quantitative finance research toolkit with data fetching, technical indicators, backtesting, and portfolio optimization"
+version = "0.2.0"
+description = "A comprehensive Python quant research toolkit with ML, advanced portfolio optimization (riskfolio-lib), performance analytics (quantstats), and HTML reporting"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.3.1",
+    "kaleido>=1.2.0",
     "matplotlib>=3.10.8",
+    "nbformat>=5.10.4",
     "numpy>=2.4.1",
     "pandas>=3.0.0",
+    "plotly>=6.5.2",
     "pyyaml>=6.0.3",
+    "quantstats>=0.0.81",
     "rich>=14.2.0",
+    "riskfolio-lib>=7.0.1",
+    "scikit-learn>=1.8.0",
     "scipy>=1.17.0",
     "yfinance>=1.0",
 ]
