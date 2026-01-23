@@ -1,0 +1,107 @@
+# BeGlobal Mixed Strategy Pipeline
+# Replicates https://beglobal.pl/metodologia-inwestycyjna
+# Medium risk profile with 3-year minimum investment horizon
+
+name: "BeGlobal Mixed Strategy"
+description: "Core-satellite approach with dual momentum - Medium risk profile"
+
+# Data Configuration - 13 Asset Classes via ETFs
+data:
+  symbols:
+    # Fixed Income
+    - SHV   # Money Market (0-1yr)
+    - SHY   # US Treasury Short (1-3yr)
+    - IEF   # US Treasury Medium (7-10yr)
+    - TLT   # US Treasury Long (20+yr)
+    - BWX   # Developed Sovereigns ex-US
+    - LQD   # Corporate Investment Grade
+    - HYG   # Corporate High Yield
+    - EMB   # Emerging Market Bonds
+    # Equities
+    - SPY   # US Stocks (S&P 500)
+    - EFA   # Developed Markets ex-US
+    - EEM   # Emerging Markets
+    # Alternatives
+    - VNQ   # Real Estate (REITs)
+    - GLD   # Gold
+  period: "5y"
+  interval: "1d"
+
+# Caching - BeGlobal monitors daily
+cache:
+  enabled: true
+  ttl: 86400
+
+# Risk Profile Configuration
+risk_profile:
+  name: "mixed"
+  min_investment_period_years: 3
+  target_volatility: 0.10  # 10% annualized
+
+# Core-Satellite Configuration
+core_satellite:
+  core_weight: 0.70      # 70% passive
+  satellite_weight: 0.30  # 30% active momentum
+
+# Core (Passive) Allocation - BeGlobal Mixed
+core_allocation:
+  money_market: 0.20      # 20% Rynek pieniężny
+  us_treasury_short: 0.35  # 35% obligacje krótkoterminowe
+  us_treasury_medium: 0.15 # 15% obligacje średnio i długoterminowe
+  us_stocks: 0.20         # 20% akcje (via SPY)
+  developed_stocks: 0.05  # 5% akcje zagraniczne
+  gold: 0.05              # 5% złoto
+
+# Active Strategies Configuration
+strategies:
+  dual_momentum:
+    enabled: true
+    lookback_period: 252  # 12 months
+    short_lookback: 21    # 1 month for regime detection
+
+  relative_strength:
+    enabled: true
+    lookback_periods: [21, 63, 126, 252]  # 1m, 3m, 6m, 12m
+    top_n: 3
+
+  trend_following:
+    enabled: true
+    short_ma: 50
+    long_ma: 200
+
+# Rebalancing Configuration - Corridor Method
+rebalancing:
+  method: "corridor"
+  threshold: 0.025        # ±2.5% triggers rebalance
+  check_frequency: "D"    # Daily monitoring
+  max_single_etf: 0.20    # No single ETF > 20%
+
+# Volatility Targeting
+volatility_targeting:
+  enabled: true
+  target: 0.10            # 10% annualized
+  high_vol_threshold: 1.5  # Reduce at 1.5x normal
+  low_vol_threshold: 0.5
+
+# Transaction Costs (BeGlobal: 0.07%)
+costs:
+  commission: 0.0007
+  slippage: 0.0005
+
+# Analysis Configuration
+analysis:
+  metrics:
+    - total_return
+    - annualized_return
+    - volatility
+    - sharpe_ratio
+    - sortino_ratio
+    - max_drawdown
+    - calmar_ratio
+  risk_metrics:
+    var_confidence: 0.95
+    cvar_confidence: 0.95
+  benchmark: "60_40"  # Compare to 60/40 portfolio
+  export:
+    format: "html"
+    path: "reports/beglobal_mixed.html"

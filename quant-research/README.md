@@ -18,6 +18,7 @@ A comprehensive Python quantitative finance research toolkit built with modern b
 - **Vectorized Backtesting**: Fast numpy-based backtesting with parameter optimization
 - **Caching**: Disk and memory caching for expensive operations
 - **Notebook Pipelines**: Parameterized notebook execution with papermill
+- **BeGlobal Strategy**: Core-satellite portfolio with dual momentum (replicates [beglobal.pl](https://beglobal.pl/metodologia-inwestycyjna))
 
 ### Pipeline System
 - YAML-based configuration
@@ -270,6 +271,65 @@ outputs = pipeline.execute_batch(
 )
 ```
 
+### BeGlobal Investment Strategy
+
+Replicates the [BeGlobal investment methodology](https://beglobal.pl/metodologia-inwestycyjna) with:
+- 5 risk profiles (Safe to Profit+)
+- 13 asset classes across fixed income, equities, and alternatives
+- Core-Satellite approach (70% passive, 30% active)
+- Dual momentum, relative strength, and trend following strategies
+- Corridor rebalancing (±2.5% threshold)
+- Conditional volatility targeting
+
+```python
+from quant_research import (
+    create_beglobal_portfolio,
+    BeGlobalPortfolio,
+    RiskProfile,
+    DataFetcher,
+    ASSET_CLASSES,
+    RISK_PROFILE_ALLOCATIONS,
+)
+
+# Create BeGlobal portfolio (Mixed risk profile)
+portfolio = create_beglobal_portfolio(risk_profile="mixed", core_weight=0.7)
+
+# View allocation
+print(f"Risk Profile: {portfolio.risk_profile.value}")
+for asset, weight in portfolio.base_allocation.items():
+    print(f"  {asset}: {weight:.1%}")
+
+# Get ETF tickers needed
+tickers = portfolio.get_etf_tickers()
+print(f"ETFs: {tickers}")  # ['SHV', 'SHY', 'IEF', 'SPY', 'EFA', 'GLD']
+
+# Run backtest with real data
+fetcher = DataFetcher()
+prices = pd.DataFrame({
+    symbol: fetcher.get_stock_data(symbol, period="2y")["close"]
+    for symbol in tickers
+})
+
+results = portfolio.run_backtest(prices, initial_capital=100000)
+
+print(f"Total Return: {results['metrics']['total_return']:.2%}")
+print(f"Annualized Return: {results['metrics']['annual_return']:.2%}")
+print(f"Volatility: {results['metrics']['volatility']:.2%}")
+print(f"Sharpe Ratio: {results['metrics']['sharpe_ratio']:.2f}")
+print(f"Max Drawdown: {results['metrics']['max_drawdown']:.2%}")
+print(f"Rebalances: {results['metrics']['rebalance_count']}")
+```
+
+**Available Risk Profiles:**
+
+| Profile | Min Period | Risk Level | Stock Allocation |
+|---------|-----------|------------|------------------|
+| `safe` | 3 months | Very Low | 0% |
+| `bond_plus` | 2 years | Low | 5% |
+| `mixed` | 3 years | Medium | 25% |
+| `profit` | 4 years | High | 50% |
+| `profit_plus` | 5 years | Very High | 70% |
+
 ## Pipeline System
 
 ### Running Pipelines via CLI
@@ -350,6 +410,7 @@ analysis:
 | `multi_strategy.yaml` | Ensemble | Multiple strategies with voting |
 | `ml_prediction.yaml` | ML Prediction | Machine learning direction prediction |
 | `notebook_analysis.yaml` | Notebook Pipeline | Execute parameterized notebooks |
+| `beglobal_mixed.yaml` | BeGlobal Mixed | Core-satellite dual momentum (medium risk) |
 
 ## Module Reference
 
@@ -374,6 +435,7 @@ analysis:
 | `reporting` | plotly | Interactive HTML reports |
 | `caching` | diskcache/joblib | Disk and memory caching |
 | `notebook_pipeline` | papermill | Parameterized notebook execution |
+| `beglobal_strategy` | - | BeGlobal methodology with dual momentum |
 
 ## Technical Indicators
 
@@ -451,7 +513,8 @@ quant-research/
 │   ├── sector_rotation.yaml     # Sector ETF rotation
 │   ├── multi_strategy.yaml      # Ensemble strategies
 │   ├── ml_prediction.yaml       # ML direction prediction
-│   └── notebook_analysis.yaml   # Notebook pipeline
+│   ├── notebook_analysis.yaml   # Notebook pipeline
+│   └── beglobal_mixed.yaml      # BeGlobal Mixed risk profile
 ├── notebooks/                   # Jupyter notebook templates
 ├── scripts/
 │   └── run_pipeline.py          # CLI interface
@@ -468,7 +531,8 @@ quant-research/
 │   ├── pipeline.py              # Research workflow (with caching)
 │   ├── reporting.py             # HTML reports
 │   ├── caching.py               # Disk/memory caching
-│   └── notebook_pipeline.py     # Papermill integration
+│   ├── notebook_pipeline.py     # Papermill integration
+│   └── beglobal_strategy.py     # BeGlobal methodology
 ├── main.py                      # Example script
 ├── pyproject.toml               # Project config
 └── README.md

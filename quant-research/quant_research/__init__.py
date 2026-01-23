@@ -72,6 +72,18 @@ from quant_research.notebook_pipeline import (
     create_all_templates,
     run_notebook_pipeline,
 )
+from quant_research.beglobal_strategy import (
+    RiskProfile,
+    BeGlobalPortfolio,
+    DualMomentumStrategy,
+    RelativeStrengthStrategy,
+    TrendFollowingStrategy,
+    CorridorRebalancer,
+    VolatilityTargeting,
+    create_beglobal_portfolio,
+    ASSET_CLASSES,
+    RISK_PROFILE_ALLOCATIONS,
+)
 
 __version__ = "0.3.0"
 __all__ = [
@@ -122,4 +134,15 @@ __all__ = [
     "NotebookTemplates",
     "create_all_templates",
     "run_notebook_pipeline",
+    # BeGlobal Strategy
+    "RiskProfile",
+    "BeGlobalPortfolio",
+    "DualMomentumStrategy",
+    "RelativeStrengthStrategy",
+    "TrendFollowingStrategy",
+    "CorridorRebalancer",
+    "VolatilityTargeting",
+    "create_beglobal_portfolio",
+    "ASSET_CLASSES",
+    "RISK_PROFILE_ALLOCATIONS",
 ]
