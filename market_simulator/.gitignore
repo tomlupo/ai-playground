@@ -1,0 +1,23 @@
+# Virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Output files
+output/
+*.png
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
