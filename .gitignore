@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# uv
+.uv/
+uv.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Outputs (keep directory, ignore contents)
+outputs/*
+!outputs/.gitkeep
+
+# Data (keep directory, allow committing sample data)
+# data/*
+# !data/.gitkeep
+
+# Scratch experiments (optional: uncomment to ignore)
+# tools/scratch/*
+# !tools/scratch/.gitkeep
+
+# Environment
+.env
+.env.local
+*.env
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/

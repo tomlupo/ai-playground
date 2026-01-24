@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "scripts/setup-env.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(uv *)",
+      "Bash(gh gist *)",
+      "Bash(python *)",
+      "Bash(pytest *)"
+    ]
+  }
+}
