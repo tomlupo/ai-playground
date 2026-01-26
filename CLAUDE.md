@@ -2,6 +2,10 @@
 
 Quick experimentation repo for Python tools and ideas. Optimized for Claude Code Cloud.
 
+**Defaults:** Python, uv package manager, quant research focus.
+
+**Core rule:** Build what user asks. Test if code works (actually run the code and verify results).
+
 ## Project Structure
 
 ```
@@ -63,14 +67,18 @@ uv run pytest tools/{tool-name}/
 
 ## Compound Engineering Workflow
 
-This repo uses compound-engineering for knowledge amplification across sessions.
+**Philosophy:** 80% planning and review, 20% execution. Each unit of work should make subsequent units easier—not harder.
 
-### Core Commands
-- `/workflows:brainstorm` - Explore approaches with multi-perspective analysis
-- `/workflows:plan` - Create structured implementation plan
-- `/workflows:work` - Execute systematically with verification
-- `/workflows:review` - Multi-agent code review (security, performance, correctness)
-- `/workflows:compound` - Document solved problems for future reuse
+### Core Loop: Plan → Work → Review → Compound → Repeat
+
+| Command | Purpose |
+|---------|---------|
+| `/workflows:plan` | Turn feature ideas into detailed implementation plans |
+| `/workflows:work` | Execute plans with worktrees and task tracking |
+| `/workflows:review` | Multi-agent code review before merging |
+| `/workflows:compound` | Document learnings to make future work easier |
+
+Each cycle compounds: plans inform future plans, reviews catch more issues, patterns get documented.
 
 ### For Signal Research (RALPH Loop)
 1. **Research** → `/workflows:brainstorm` (form hypothesis)
