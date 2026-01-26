@@ -25,9 +25,16 @@ Usage:
     uv run fetch_unified.py  # Run self-tests
 """
 
+import os
 import pandas as pd
+from pathlib import Path
 from typing import Optional, Literal, List, Tuple
 import re
+
+
+class NetworkError(Exception):
+    """Raised when network requests fail and offline fallback should be used."""
+    pass
 
 # Import TickerRegistry for security lookups
 try:
@@ -501,6 +508,157 @@ def fetch_market_data(identifier: str, start_date: Optional[str] = None,
         crypto_exchange=crypto_exchange
     )
     return fetcher.fetch(identifier, start_date, end_date, source, **kwargs)
+
+
+# =============================================================================
+# Offline Fallback Support
+# =============================================================================
+
+# Sample data mapping: symbol -> filename
+SAMPLE_DATA_MAPPING = {
+    'wig20': 'WIG20.csv',
+    'idx_wig20': 'WIG20.csv',
+    'spy': 'SPY.csv',
+    '^gspc': 'SPY.csv',  # S&P 500 -> use SPY as proxy
+    'btc/usdt': 'BTC-USD.csv',
+    'btc-usd': 'BTC-USD.csv',
+    'btcusdt': 'BTC-USD.csv',
+}
+
+
+def get_sample_data_path() -> Path:
+    """Get the path to sample data directory."""
+    # Try relative to this script first
+    script_dir = Path(__file__).parent
+    sample_dir = script_dir.parent.parent.parent.parent / 'data' / 'samples'
+
+    if sample_dir.exists():
+        return sample_dir
+
+    # Fallback to current working directory
+    cwd_sample = Path.cwd() / 'data' / 'samples'
+    if cwd_sample.exists():
+        return cwd_sample
+
+    return sample_dir  # Return default even if doesn't exist
+
+
+def load_sample_data(identifier: str) -> Optional[pd.DataFrame]:
+    """
+    Load sample data for a given identifier.
+
+    Args:
+        identifier: Symbol or identifier to load
+
+    Returns:
+        DataFrame with sample data, or None if not available
+    """
+    sample_dir = get_sample_data_path()
+    identifier_lower = identifier.lower().replace('_', '-')
+
+    # Check direct mapping
+    if identifier_lower in SAMPLE_DATA_MAPPING:
+        filename = SAMPLE_DATA_MAPPING[identifier_lower]
+        filepath = sample_dir / filename
+        if filepath.exists():
+            df = pd.read_csv(filepath, parse_dates=['Date'], index_col='Date')
+            return df
+
+    # Try direct filename match
+    for pattern in [f'{identifier}.csv', f'{identifier.upper()}.csv', f'{identifier.lower()}.csv']:
+        filepath = sample_dir / pattern
+        if filepath.exists():
+            df = pd.read_csv(filepath, parse_dates=['Date'], index_col='Date')
+            return df
+
+    return None
+
+
+def is_offline_mode() -> bool:
+    """Check if offline mode is enabled via environment variable."""
+    return os.environ.get('MARKET_DATA_OFFLINE_MODE', 'false').lower() in ('true', '1', 'yes')
+
+
+def fetch_with_offline_fallback(
+    identifier: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    source: Optional[str] = None,
+    use_cache: bool = True,
+    **kwargs
+) -> pd.DataFrame:
+    """
+    Fetch market data with automatic offline fallback.
+
+    If network requests fail or MARKET_DATA_OFFLINE_MODE=true, falls back to
+    sample data in data/samples/.
+
+    Args:
+        identifier: ISIN, UID, ticker symbol, or crypto pair
+        start_date: Start date (YYYY-MM-DD or YYYYMMDD)
+        end_date: End date (YYYY-MM-DD or YYYYMMDD)
+        source: Force specific source (None for auto)
+        use_cache: Whether to use caching
+        **kwargs: Additional arguments passed to fetcher
+
+    Returns:
+        DataFrame with market data (live or sample)
+
+    Raises:
+        ValueError: If no data available (live or sample)
+    """
+    # Check if offline mode is forced
+    if is_offline_mode():
+        print(f"[Unified] Offline mode enabled, loading sample data for '{identifier}'")
+        sample_df = load_sample_data(identifier)
+        if sample_df is not None:
+            # Filter by date range if specified
+            if start_date:
+                sample_df = sample_df[sample_df.index >= pd.to_datetime(start_date)]
+            if end_date:
+                sample_df = sample_df[sample_df.index <= pd.to_datetime(end_date)]
+            return sample_df
+        raise ValueError(f"No sample data available for '{identifier}' in offline mode")
+
+    # Try live fetch first
+    try:
+        return fetch_market_data(
+            identifier=identifier,
+            start_date=start_date,
+            end_date=end_date,
+            source=source,
+            use_cache=use_cache,
+            **kwargs
+        )
+    except Exception as e:
+        # Check if this looks like a network error
+        error_str = str(e).lower()
+        is_network_error = any(x in error_str for x in [
+            'connection', 'timeout', 'network', 'refused',
+            'unreachable', 'dns', 'ssl', 'socket'
+        ])
+
+        if is_network_error:
+            print(f"[Unified] Network error for '{identifier}': {e}")
+            print(f"[Unified] Attempting offline fallback...")
+
+            sample_df = load_sample_data(identifier)
+            if sample_df is not None:
+                print(f"[Unified] Using sample data from data/samples/")
+                # Filter by date range if specified
+                if start_date:
+                    sample_df = sample_df[sample_df.index >= pd.to_datetime(start_date)]
+                if end_date:
+                    sample_df = sample_df[sample_df.index <= pd.to_datetime(end_date)]
+                return sample_df
+
+            raise NetworkError(
+                f"Network error fetching '{identifier}' and no sample data available. "
+                f"Original error: {e}"
+            )
+
+        # Not a network error, re-raise original
+        raise
 
 
 if __name__ == '__main__':

@@ -61,6 +61,42 @@ uv run tools/{tool-name}/main.py --input data/sample.csv
 uv run pytest tools/{tool-name}/
 ```
 
+## Compound Engineering Workflow
+
+This repo uses compound-engineering for knowledge amplification across sessions.
+
+### Core Commands
+- `/workflows:brainstorm` - Explore approaches with multi-perspective analysis
+- `/workflows:plan` - Create structured implementation plan
+- `/workflows:work` - Execute systematically with verification
+- `/workflows:review` - Multi-agent code review (security, performance, correctness)
+- `/workflows:compound` - Document solved problems for future reuse
+
+### For Signal Research (RALPH Loop)
+1. **Research** → `/workflows:brainstorm` (form hypothesis)
+2. **Act** → `/workflows:plan` + `/workflows:work` (implement)
+3. **Learn** → `/iterate check` (validate against criteria)
+4. **Plan** → Refine approach or pivot
+5. **Hypothesize** → Start next iteration
+
+### Context Preservation
+```bash
+/handoff  # Save context before /clear or session end
+/resume   # Continue from saved state in new session
+```
+
+### Headless Quant Research Pattern
+```bash
+# Create specification
+/qrd momentum-signal
+
+# Execute autonomously
+/workflows:work --spec outputs/qrd/momentum-signal.md
+
+# Document learnings
+/workflows:compound --topic momentum-calculation
+```
+
 ## Creating Gists
 
 When asked to share via gist:
@@ -100,3 +136,57 @@ When experimenting:
 2. Print intermediate results
 3. Save interesting outputs
 4. Document what worked in the tool's README
+
+## Claude Code Web Optimization
+
+This repository is optimized for Claude Code Web (cloud-based sessions).
+
+### Environment Setup
+
+1. **Network Access**: Use "Full Internet" for market-data-fetcher access to:
+   - `stooq.pl` (Polish markets)
+   - `api.nbp.pl` (PLN FX rates)
+   - `query1.finance.yahoo.com` (Yahoo Finance)
+
+2. **API Keys**: Set in environment configuration (not `.env` file):
+   - `TIINGO_API_KEY` - Optional, for Tiingo data
+   - `FRED_API_KEY` - Optional, for FRED economic data
+   - `CONTEXT7_API_KEY` - For context7 skill
+
+3. **SessionStart Hook**: `scripts/setup-env.sh` auto-installs:
+   - `uv` package manager
+   - `gh` GitHub CLI
+   - Pre-downloads NLP models
+
+See `docs/claude-code-web-setup.md` for detailed configuration.
+
+### Best Patterns for Cloud
+
+- **Parallel execution**: Use `&` prefix to spawn parallel data fetching tasks
+- **QRD specs**: Use `/qrd` skill to create specifications, then execute autonomously
+- **PDF processing**: Upload PDFs to repo first, then use pdf-skill
+- **Gist sharing**: Use `/gist-report` to share results
+
+### Limitations & Workarounds
+
+- **Network limited**: Use `data/samples/` for cached market data (WIG20, SPY, BTC-USD)
+- **MCP servers**: Don't work in Cloud Web. Use `context7` skill CLI instead:
+  ```bash
+  python3 .claude/skills/context7/scripts/context7.py search "react"
+  ```
+- **Local paths**: `/gist-transcript` references local paths, not cloud-compatible
+
+### Parallel Task Templates
+
+For multi-symbol analysis:
+```
+& Fetch WIG20 data and create momentum analysis
+& Fetch SPY data and create momentum analysis
+& Fetch BTC-USD data and create momentum analysis
+```
+
+For multi-perspective review:
+```
+& /workflows:review --focus security
+& /workflows:review --focus performance
+```
