@@ -83,15 +83,9 @@ Each cycle compounds: plans inform future plans, reviews catch more issues, patt
 ### For Signal Research (RALPH Loop)
 1. **Research** → `/workflows:brainstorm` (form hypothesis)
 2. **Act** → `/workflows:plan` + `/workflows:work` (implement)
-3. **Learn** → `/iterate check` (validate against criteria)
+3. **Learn** → Review results against acceptance criteria
 4. **Plan** → Refine approach or pivot
 5. **Hypothesize** → Start next iteration
-
-### Context Preservation
-```bash
-/handoff  # Save context before /clear or session end
-/resume   # Continue from saved state in new session
-```
 
 ### Headless Quant Research Pattern
 ```bash
