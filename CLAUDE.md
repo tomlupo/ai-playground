@@ -65,38 +65,86 @@ uv run tools/{tool-name}/main.py --input data/sample.csv
 uv run pytest tools/{tool-name}/
 ```
 
+## Coding Rules
+
+Generic coding standards are in `.claude/rules/`:
+- `code-quality.md` — Constants, naming, DRY, SRP, encapsulation
+- `general-rules.md` — Task workflow, communication, problem-solving
+- `work-organization.md` — Directory structure, scratch-first rule
+- `python-rules.md` — uv, Black, type hints, formatting conventions
+
+## Session Memory
+
+Persist knowledge across ephemeral cloud sessions using `docs/memory/`:
+- `decisions.md` — Architectural and design decisions
+- `patterns.md` — Recurring patterns and conventions
+- `issues.md` — Known issues and workarounds
+
+**Convention:** At end of significant sessions, save key learnings to these files.
+
+## MCP Alternatives (Cloud)
+
+MCP servers don't work on Claude Remote. Use these alternatives:
+
+| MCP | Alternative |
+|-----|-------------|
+| `fetch` | Built-in `WebFetch`/`WebSearch`, or `curl` |
+| `sequential-thinking` | Native extended thinking + `forced-eval` hook |
+| `memory` | `docs/memory/` directory (decisions.md, patterns.md, issues.md) |
+| `firecrawl` | `uv run python -c "import httpx; ..."` + BeautifulSoup |
+| `postgres` | `uv run python` with psycopg2/sqlalchemy + `sql-patterns` skill |
+
+## Multi-Model Review
+
+Use external AI models for second opinions:
+- `/review` — Code review via Codex/Gemini
+- `/compare` — Multi-model review comparison
+- `/architecture` — Architecture review (Gemini 1M context)
+- `/security` — Security-focused review (Codex)
+- `/ask` — Multi-model question answering
+- `/debate` — Structured multi-model debate
+- `/decide` — Decision support with pros/cons from multiple models
+- `/brainstorm` — Collaborative brainstorming across models
+
 ## Compound Engineering Workflow
 
-**Philosophy:** 80% planning and review, 20% execution. Each unit of work should make subsequent units easier—not harder.
+**Plugin:** `compound-engineering@every-marketplace` — 80% planning and review, 20% execution. Each unit of work should make subsequent units easier.
 
-### Core Loop: Plan → Work → Review → Compound → Repeat
+### Core Loop: `/workflows:plan` → `/workflows:work` → `/workflows:review` → `/workflows:compound`
 
-| Command | Purpose |
-|---------|---------|
-| `/workflows:plan` | Turn feature ideas into detailed implementation plans |
-| `/workflows:work` | Execute plans with worktrees and task tracking |
-| `/workflows:review` | Multi-agent code review before merging |
-| `/workflows:compound` | Document learnings to make future work easier |
+| Command | What it does |
+|---------|-------------|
+| `/workflows:brainstorm` | Explore requirements and approaches through collaborative dialogue. Creates `docs/brainstorms/` doc. |
+| `/workflows:plan` | Transform feature descriptions into structured plans. Runs parallel research agents (repo-research, best-practices, framework-docs). Creates `docs/plans/` doc. |
+| `/workflows:work` | Execute plans with TodoWrite tracking, incremental commits, optional reviewer agents. Creates PR when done. |
+| `/workflows:review` | Multi-agent code review (13+ parallel reviewers: security-sentinel, performance-oracle, architecture-strategist, etc.). Creates prioritized P1/P2/P3 todos. |
+| `/workflows:compound` | Document solved problems as searchable knowledge in `docs/solutions/[category]/`. Runs 6 parallel subagents. |
 
-Each cycle compounds: plans inform future plans, reviews catch more issues, patterns get documented.
+Additional utilities: `/deepen-plan`, `/plan_review`, `/triage`, `/resolve_parallel`, `/changelog`
 
-### For Signal Research (RALPH Loop)
-1. **Research** → `/workflows:brainstorm` (form hypothesis)
-2. **Act** → `/workflows:plan` + `/workflows:work` (implement)
-3. **Learn** → Review results against acceptance criteria
+### Quant Research (RALPH Loop)
+1. **Research** → `/workflows:brainstorm` or `/ask` (form hypothesis)
+2. **Act** → `/workflows:plan` + `/workflows:work` in `tools/{name}/`
+3. **Learn** → `/workflows:review` results against acceptance criteria
 4. **Plan** → Refine approach or pivot
-5. **Hypothesize** → Start next iteration
+5. **Hypothesize** → `/workflows:compound` learnings, start next iteration
 
 ### Headless Quant Research Pattern
 ```bash
 # Create specification
 /qrd momentum-signal
 
-# Execute autonomously
-/workflows:work --spec outputs/qrd/momentum-signal.md
+# Plan with parallel research
+/workflows:plan momentum signal implementation
 
-# Document learnings
-/workflows:compound --topic momentum-calculation
+# Execute the plan
+/workflows:work
+
+# Multi-agent review
+/workflows:review
+
+# Compound learnings
+/workflows:compound
 ```
 
 ## Creating Gists

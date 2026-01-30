@@ -92,12 +92,21 @@ check_url "PyPI" "https://pypi.org"
 echo ""
 echo "Setting up plugin marketplaces..."
 
-if command -v claude &> /dev/null; then
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+    echo "  Remote environment detected, skipping marketplace CLI setup"
+    echo "  Note: Plugins configured via .claude/settings.json enabledPlugins"
+elif command -v claude &> /dev/null; then
     # Add qute-marketplace from GitHub if not already added
     claude plugin marketplace add https://github.com/tomlupo/qute-marketplace.git 2>/dev/null || true
     echo "  qute-marketplace: configured"
+
+    # Install marketplace plugins (fallback skills embedded in .claude/skills/)
+    claude plugin install github:tomlupo/qute-marketplace 2>/dev/null || true
+    claude plugin install github:EveryInc/compound-engineering-plugin 2>/dev/null || true
+    echo "  marketplace plugins: installed (or using embedded fallback)"
 else
     echo "  Claude CLI not found, skipping marketplace setup"
+    echo "  Note: Embedded skill files in .claude/skills/ provide fallback"
 fi
 
 # =============================================================================

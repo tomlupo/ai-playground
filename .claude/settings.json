@@ -1,6 +1,22 @@
 {
   "permissions": {
     "allow": [
+      "Read(.claude/**)",
+      "Edit(.claude/**)",
+      "Write(.claude/**)",
+      "Edit(tools/**)",
+      "Write(tools/**)",
+      "Edit(shared/**)",
+      "Write(shared/**)",
+      "Edit(scripts/**)",
+      "Write(scripts/**)",
+      "Edit(data/**)",
+      "Write(data/**)",
+      "Read(docs/**)",
+      "Edit(docs/**)",
+      "Write(docs/**)",
+      "Edit(outputs/**)",
+      "Write(outputs/**)",
       "Bash(uv *)",
       "Bash(gh gist *)",
       "Bash(python *)",
@@ -14,7 +30,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/setup-env.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/setup-env.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/post-commit-changelog-hook.py",
+            "tools": ["Bash"]
           }
         ]
       }
@@ -25,16 +53,14 @@
     "context7@claude-plugins-official": true,
     "commit-commands@claude-plugins-official": true,
     "feature-dev@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
     "document-skills@anthropic-agent-skills": true,
     "example-skills@anthropic-agent-skills": true,
-    "hookify@claude-plugins-official": true,
-    "plugin-dev@claude-plugins-official": true,
-    "agent-sdk-dev@claude-plugins-official": true,
-    "code-simplifier@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true,
-    "compound-engineering@every-marketplace": true,
+    "pyright-lsp@claude-plugins-official": true,
     "forced-eval@qute-marketplace": true,
     "llm-council@qute-marketplace": true,
-    "llm-external-review@qute-marketplace": true
+    "llm-external-review@qute-marketplace": true,
+    "datasets-guide@qute-marketplace": true,
+    "compound-engineering@every-marketplace": true
   }
 }
