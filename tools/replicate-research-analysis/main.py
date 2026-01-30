@@ -86,7 +86,8 @@ class Config:
     commission: float = 1.0        # $1 fixed per trade
     slippage_bps: float = 5.0      # 5 basis points
     max_positions: int = 5
-    max_position_pct: float = 0.20 # 20% per position
+    max_position_pct: float = 0.20 # 20% of portfolio value
+    max_deploy_pct: float = 0.20   # Paper: "80% remains in cash" → max 20% deployed
     initial_capital: float = 100_000.0
     epsilon_train: float = 0.7
     epsilon_test: float = 0.1
@@ -369,7 +370,7 @@ class Position:
     entry_price: float
     shares: int
     hypothesis: Hypothesis
-    max_hold_days: int = 63  # one quarter max hold
+    max_hold_days: int = 30  # Paper: 30-day max holding period
 
 
 class Portfolio:
@@ -397,14 +398,35 @@ class Portfolio:
             eq += pos.shares * px
         return eq
 
-    def open_position(self, hypothesis: Hypothesis, price: float, date: pd.Timestamp) -> bool:
-        """Open a new position if constraints are met."""
+    def open_position(self, hypothesis: Hypothesis, price: float, date: pd.Timestamp,
+                      current_prices: dict[str, float] | None = None) -> bool:
+        """Open a new position if constraints are met.
+
+        Paper Eq. 17: PositionSize = min(0.20 × V_t / (|P_t|+1), 0.20 × V_t / P_exec)
+        Paper constraint: "80% remains in cash" — max 20% of portfolio deployed.
+        """
         if self.num_positions >= self.cfg.max_positions:
             return False
         if any(p.ticker == hypothesis.ticker for p in self.positions):
             return False  # no duplicate positions
 
-        alloc = self.cash * self.cfg.max_position_pct
+        # Current portfolio value
+        prices_for_eq = current_prices or {}
+        portfolio_value = self.total_equity(prices_for_eq)
+
+        # Paper: enforce 80% cash reserve — total invested <= 20% of portfolio
+        current_invested = sum(
+            p.shares * prices_for_eq.get(p.ticker, p.entry_price) for p in self.positions
+        )
+        max_total_invested = portfolio_value * self.cfg.max_deploy_pct
+        remaining_invest_budget = max_total_invested - current_invested
+        if remaining_invest_budget <= 0:
+            return False
+
+        # Paper Eq. 17: 0.20 × V_t / (|P_t| + 1)
+        alloc = self.cfg.max_position_pct * portfolio_value / (self.num_positions + 1)
+        alloc = min(alloc, remaining_invest_budget)  # respect 20% deploy cap
+
         exec_price = self._apply_slippage(price, is_buy=True)
         shares = int(alloc / exec_price)
         if shares <= 0:
@@ -543,7 +565,13 @@ def run_fold(fold_id: int, all_features: dict[str, pd.DataFrame],
         open_tickers = {p.ticker for p in portfolio.positions}
         days_held = {k: v for k, v in days_held.items() if k in open_tickers}
 
-        # Generate and evaluate new hypotheses
+        # Generate and evaluate new hypotheses (weekly, matching paper's ~4 trades/fold)
+        day_idx = list(test_dates).index(date) if date in test_dates else 0
+        if day_idx % 5 != 0:  # evaluate weekly (every 5 trading days)
+            eq = portfolio.total_equity(current_prices)
+            portfolio.equity_curve.append((date, eq))
+            continue
+
         all_hypotheses: list[tuple[Hypothesis, float]] = []
         for ticker, features in all_features.items():
             if date not in features.index:
@@ -559,7 +587,7 @@ def run_fold(fold_id: int, all_features: dict[str, pd.DataFrame],
         # Sort by confidence, take top opportunities
         all_hypotheses.sort(key=lambda x: x[0].confidence, reverse=True)
         for h, px in all_hypotheses[:cfg.max_positions - portfolio.num_positions]:
-            if portfolio.open_position(h, px, date):
+            if portfolio.open_position(h, px, date, current_prices):
                 h_type = h.hypothesis_type.value
                 h_counts[h_type] = h_counts.get(h_type, 0) + 1
 
