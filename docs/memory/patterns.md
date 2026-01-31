@@ -34,11 +34,26 @@ Academic papers often bury critical quantitative constraints in equations, appen
 - **Trade frequency** — cross-check total trade counts against your output
 
 ### Research replication workflow
-1. Fetch paper → extract ALL quantitative details (formulas, parameters, constraints)
-2. Build v1 implementation
-3. Run and compare aggregate metrics against paper
-4. If divergent: re-read paper for missed constraints (capital reserves, hold limits, sizing formulas)
-5. Fix and re-run until metrics align within reasonable tolerance
+1. **paper-reading** skill (3-pass) → extract ALL quantitative details (formulas, parameters, constraints)
+2. **qrd** skill → create spec with acceptance criteria (target trade count, beta, returns)
+3. **market-data-fetcher** skill → clean data acquisition with caching
+4. Build implementation against spec
+5. Run and compare against acceptance criteria
+6. If divergent: re-read paper for missed constraints
+7. **statistical-analysis** skill → proper stat tests with APA reporting
+8. **/llm-external-review:code** → external review for logic errors
+
+### Skill usage discipline
+Always evaluate available skills BEFORE starting implementation:
+- `paper-reading` for any academic paper analysis
+- `qrd` for any quant research task (creates spec + acceptance criteria)
+- `market-data-fetcher` for any financial data (replaces raw yfinance)
+- `statistical-analysis` for hypothesis testing
+- `context7` for library documentation
+- `exploratory-data-analysis` for data profiling
+- `/llm-external-review:code` after significant code changes
+
+The `forced-eval` hook exists to enforce this — don't bypass it.
 
 ## Quant Research Patterns
 
