@@ -6,6 +6,8 @@ Quick experimentation repo for Python tools and ideas. Optimized for Claude Code
 
 **Core rule:** Build what user asks. Test if code works (actually run the code and verify results).
 
+**Skill rule:** NEVER build from scratch what a skill already does. Before implementing, check `.claude/skills/` for applicable skills. Use them.
+
 ## Project Structure
 
 ```
@@ -73,6 +75,29 @@ Generic coding standards are in `.claude/rules/`:
 - `work-organization.md` — Directory structure, scratch-first rule
 - `python-rules.md` — uv, Black, type hints, formatting conventions
 
+## Skill Selection (Mandatory)
+
+Before starting any non-trivial task, match the task to available skills:
+
+| Task Type | Required Skill | Never Do Instead |
+|-----------|---------------|------------------|
+| Read a research paper | `paper-reading` (3-pass) | Raw WebFetch with ad-hoc prompts |
+| Fetch market/financial data | `market-data-fetcher` | Raw yfinance/requests |
+| Quant research specification | `qrd` | Jump straight to coding |
+| Statistical hypothesis testing | `statistical-analysis` | Hand-code t-tests/bootstrap |
+| Library documentation lookup | `context7` (MCP or CLI) | Rely on training data |
+| PDF document analysis | `pdf-skill` + `research-paper-analyst` agent | Manual text extraction |
+| Data profiling | `exploratory-data-analysis` | Ad-hoc pandas describe() |
+| Code review | `/llm-external-review:code` | Self-review only |
+| Multi-perspective analysis | `/council:ask` or `/council:debate` | Single-model answer |
+
+### Enforcement
+
+1. At task start, list which skills apply (even if the answer is zero)
+2. If a skill exists for a subtask, use it — do not reimplement
+3. The `forced-eval` hook checks this — do not bypass it
+4. If skipping an applicable skill, state why explicitly
+
 ## Session Memory
 
 Persist knowledge across ephemeral cloud sessions using `docs/memory/`:
@@ -123,9 +148,9 @@ Use external AI models for second opinions:
 Additional utilities: `/deepen-plan`, `/plan_review`, `/triage`, `/resolve_parallel`, `/changelog`
 
 ### Quant Research (RALPH Loop)
-1. **Research** → `/workflows:brainstorm` or `/ask` (form hypothesis)
-2. **Act** → `/workflows:plan` + `/workflows:work` in `tools/{name}/`
-3. **Learn** → `/workflows:review` results against acceptance criteria
+1. **Research** → `paper-reading` skill + `/council:ask` (form hypothesis)
+2. **Act** → `qrd` spec → `market-data-fetcher` for data → `/workflows:plan` + `/workflows:work` in `tools/{name}/`
+3. **Learn** → `statistical-analysis` skill + `/workflows:review` results against acceptance criteria
 4. **Plan** → Refine approach or pivot
 5. **Hypothesize** → `/workflows:compound` learnings, start next iteration
 
@@ -146,6 +171,24 @@ Additional utilities: `/deepen-plan`, `/plan_review`, `/triage`, `/resolve_paral
 # Compound learnings
 /workflows:compound
 ```
+
+### Paper Replication Workflow
+
+When replicating an academic paper:
+
+1. **`paper-reading`** — Three-pass extraction:
+   - Pass 1: Quick assessment (title, abstract, methodology type)
+   - Pass 2: Technical summary (ALL formulas, parameters, constraints)
+   - Pass 3: Critical analysis (assumptions, limitations, acceptance criteria)
+2. **`qrd`** — Create spec with measurable acceptance criteria from paper's reported results (e.g., "total trades ~140, beta ~0.06, Sharpe ~0.33")
+3. **`market-data-fetcher`** — Data acquisition (cached, with fallbacks)
+4. **Implement** against the spec, not from memory of the paper
+5. **Run and validate** against acceptance criteria — flag any metric >2x off
+6. **`statistical-analysis`** — Proper significance tests with APA reporting
+7. **`/llm-external-review:code`** — External review for logic errors
+8. **`/workflows:compound`** — Document learnings
+
+**Critical:** Papers bury constraints in single sentences (e.g., "80% remains in cash"). The `paper-reading` skill's structured extraction catches these. Raw WebFetch does not.
 
 ## Creating Gists
 
