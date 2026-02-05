@@ -56,12 +56,19 @@ Use this skill when users request:
    - **Timeframes**: 1m, 5m, 1h, 4h, 1d, 1w
    - **Exchanges**: Binance (default), Kraken, Coinbase, 100+ more
 
-6. **FRED** (fred.stlouisfed.org)
+6. **Kenneth French Data Library** (mba.tuck.dartmouth.edu) - **NEW**
+   - Fama-French factor data and portfolio returns
+   - Free, no API key required
+   - Best for: Academic factor analysis, risk premia research
+   - **Factor symbols**: MKT-RF, SMB, HML, RMW, CMA, Mom
+   - **Datasets**: FF5_daily, FF3, MOM_daily, IND10_daily, etc.
+
+7. **FRED** (fred.stlouisfed.org)
    - US economic indicators from Federal Reserve
    - Requires free API key
    - Best for: Macroeconomic data
 
-7. **pandas-datareader**
+8. **pandas-datareader**
    - Meta-source accessing multiple providers
    - Useful fallback
    - Best for: When primary sources fail
@@ -157,6 +164,11 @@ df = fetch_market_data('USD', start_date='2024-01-01')
 # Cryptocurrency - routes to CCXT/Binance
 df = fetch_market_data('BTC/USDT', start_date='2024-01-01')
 df = fetch_market_data('ETHUSDT', start_date='2024-01-01')  # Also works
+
+# Fama-French factors - routes to Kenneth French
+df = fetch_market_data('FF5_daily', start_date='2024-01-01')  # All 5 factors
+df = fetch_market_data('SMB', start_date='2024-01-01')  # Single factor
+df = fetch_market_data('MOM_daily', start_date='2024-01-01')  # Momentum
 
 # Economic indicator - routes to FRED (if API key available)
 df = fetch_market_data('GDP', start_date='2020-01-01')
@@ -487,6 +499,7 @@ Load these files when needed for detailed information:
 - **`references/api_setup.md`**: Detailed API key setup, troubleshooting, configuration options
 - **`references/dividend_treatment.md`**: How sources handle dividend adjustments, raw vs adjusted prices, validation results
 - **`references/security_master.md`**: Security master schema, UID conventions, TickerRegistry API documentation
+- **`references/kenneth_french.md`**: Kenneth French Data Library - factor definitions, available datasets, usage examples
 
 Suggest loading these files when:
 - User asks about source capabilities

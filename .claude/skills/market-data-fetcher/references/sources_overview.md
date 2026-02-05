@@ -11,6 +11,7 @@ Comprehensive comparison of all supported data sources for the market-data-fetch
 | **Yahoo Finance** | US stocks & global equities | Global stocks, ETFs, indices | No | Informal (~1s delay) | Free |
 | **Tiingo** | US stocks fallback | 86,000+ securities, 30+ years | Yes (API key) | 50/hr, 1000/day | Free |
 | **CCXT (Binance)** | Cryptocurrency | BTC, ETH, altcoins | No | Exchange limits | Free |
+| **Kenneth French** | Academic factors | Fama-French factors, industry portfolios | No | None documented | Free |
 | **FRED** | Economic indicators | US economic data (GDP, CPI, rates) | Yes (API key) | None documented | Free |
 | **pandas-datareader** | Meta-source fallback | Multiple sources via single interface | Varies | Varies | Free |
 
@@ -322,7 +323,65 @@ df = fetcher.fetch('BTC/USD')
 
 ---
 
-### 6. FRED API (fred.stlouisfed.org)
+### 6. Kenneth French Data Library (mba.tuck.dartmouth.edu)
+
+**Purpose**: Academic factor data for asset pricing research.
+
+**Coverage**:
+- Fama-French 5-Factor model (Mkt-RF, SMB, HML, RMW, CMA)
+- Fama-French 3-Factor model
+- Momentum factor
+- Industry portfolios (5, 10, 17, 30, 49 industries)
+- Size and value sorted portfolios
+- Data from 1926 to present
+
+**Data Available**:
+- Daily and monthly factor returns
+- Portfolio returns
+- Risk-free rate
+- Values converted from percentages to decimals
+
+**Strengths**:
+- Free, no authentication required
+- Official academic source for Fama-French factors
+- Long historical data (since 1926)
+- Authoritative for asset pricing research
+- Weekly cache (data updates monthly)
+
+**Limitations**:
+- US market data only
+- Monthly update frequency
+- Academic definitions may differ from commercial factors
+
+**Best For**:
+- Factor-based portfolio analysis
+- Academic research replication
+- Risk premium analysis
+- Performance attribution
+
+**Example Datasets**:
+- `FF5_daily` - Fama-French 5 factors (daily)
+- `MOM_daily` - Momentum factor (daily)
+- `IND10_daily` - 10 industry portfolios
+- `SMB`, `HML`, `MKT-RF` - Individual factor symbols
+
+**Example Usage**:
+
+```python
+# Auto-routed (detects factor symbols)
+df = fetch_market_data('FF5_daily', start_date='20240101')
+df = fetch_market_data('SMB', start_date='20240101')  # Single factor
+
+# Full dataset
+from fetch_kenneth_french import fetch_kenneth_french
+df = fetch_kenneth_french('FF5_daily', '2020-01-01', '2024-12-31')
+```
+
+See `references/kenneth_french.md` for full documentation.
+
+---
+
+### 7. FRED API (fred.stlouisfed.org)
 
 **Purpose**: US economic indicators from Federal Reserve.
 
@@ -563,3 +622,6 @@ If experiencing rate limiting:
 | **Bitcoin/ETH tracking** | CCXT | Best crypto coverage |
 | **Hourly crypto data** | CCXT with `timeframe='1h'` | Supports all intervals |
 | **US stocks when Yahoo fails** | Tiingo | Best free tier backup |
+| **Fama-French factors** | Kenneth French | Official academic source |
+| **Factor-based analysis** | Kenneth French | Mkt-RF, SMB, HML, RMW, CMA, Mom |
+| **Industry portfolios** | Kenneth French | 5, 10, 17, 30, 49 industries |
