@@ -53,7 +53,7 @@ from scipy import stats
 warnings.filterwarnings("ignore")
 console = Console()
 
-OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "outputs" / "replicate-research-analysis"
+OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "output" / "replicate-research-analysis-diwfF"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Universe Selection ──────────────────────────────────────────────────────
