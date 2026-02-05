@@ -7,6 +7,11 @@ Quick experimentation repo for Python tools and ideas. Optimized for Claude Code
 **Core rule:** Build what user asks. Test if code works (actually run the code and verify results).
 
 **Skill rule:** NEVER build from scratch what a skill already does. Before implementing, check `.claude/skills/` for applicable skills. Use them.
+**Output:** Always produce output.
+
+- **Save artifacts** to `output/`: charts/plots (PNG, SVG), reports (Markdown, HTML), data (JSON). Use timestamped filenames: `{name}_{YYYYMMDD_HHMMSS}.png`.
+- **Print** a short summary to stdout for quick review.
+- **Always send** a summary report with the `/gist-report` skill.
 
 ## Project Structure
 
@@ -19,7 +24,7 @@ ai-playground/
 │       └── README.md        # What it does, how to use
 ├── shared/                   # Shared utilities across tools
 ├── data/                     # Sample data for experiments
-├── outputs/                  # Generated outputs, reports, charts
+├── output/                  # Generated output, reports, charts
 └── .claude/skills/          # Project-specific skills
 ```
 
@@ -29,20 +34,7 @@ ai-playground/
 - Run scripts: `uv run python tools/{tool}/main.py`
 - Add dependencies: `uv add <package>` (project-wide) or use inline script metadata
 - For tool-specific deps, use PEP 723 inline metadata in the script
-
-### PEP 723 Inline Script Metadata (Preferred for Tools)
-
-```python
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "pandas>=2.0",
-#     "requests",
-# ]
-# ///
-```
-
-Then run with: `uv run tools/{tool}/main.py`
+- **Optional extras**: `uv sync --extra finance` (quant stack: yfinance, quantstats, ffn, vectorbt, cvxpy, riskfolio-lib, arch, statsmodels, ta), `uv sync --extra ml` (scikit-learn, scipy)
 
 ## Creating New Tools
 
@@ -70,6 +62,7 @@ uv run pytest tools/{tool-name}/
 ## Coding Rules
 
 Generic coding standards are in `.claude/rules/`:
+
 - `code-quality.md` — Constants, naming, DRY, SRP, encapsulation
 - `general-rules.md` — Task workflow, communication, problem-solving
 - `work-organization.md` — Directory structure, scratch-first rule
@@ -101,6 +94,7 @@ Before starting any non-trivial task, match the task to available skills:
 ## Session Memory
 
 Persist knowledge across ephemeral cloud sessions using `docs/memory/`:
+
 - `decisions.md` — Architectural and design decisions
 - `patterns.md` — Recurring patterns and conventions
 - `issues.md` — Known issues and workarounds
@@ -112,33 +106,21 @@ Persist knowledge across ephemeral cloud sessions using `docs/memory/`:
 MCP servers don't work on Claude Remote. Use these alternatives:
 
 | MCP | Alternative |
-|-----|-------------|
+| --- | --- |
 | `fetch` | Built-in `WebFetch`/`WebSearch`, or `curl` |
 | `sequential-thinking` | Native extended thinking + `forced-eval` hook |
 | `memory` | `docs/memory/` directory (decisions.md, patterns.md, issues.md) |
-| `firecrawl` | `uv run python -c "import httpx; ..."` + BeautifulSoup |
-| `postgres` | `uv run python` with psycopg2/sqlalchemy + `sql-patterns` skill |
+| `firecrawl` | crawl4ai |
 
-## Multi-Model Review
-
-Use external AI models for second opinions:
-- `/review` — Code review via Codex/Gemini
-- `/compare` — Multi-model review comparison
-- `/architecture` — Architecture review (Gemini 1M context)
-- `/security` — Security-focused review (Codex)
-- `/ask` — Multi-model question answering
-- `/debate` — Structured multi-model debate
-- `/decide` — Decision support with pros/cons from multiple models
-- `/brainstorm` — Collaborative brainstorming across models
 
 ## Compound Engineering Workflow
 
-**Plugin:** `compound-engineering@every-marketplace` — 80% planning and review, 20% execution. Each unit of work should make subsequent units easier.
+80% planning and review, 20% execution. Each unit of work should make subsequent units easier.
 
-### Core Loop: `/workflows:plan` → `/workflows:work` → `/workflows:review` → `/workflows:compound`
+### Core Loop
 
 | Command | What it does |
-|---------|-------------|
+| --- | --- |
 | `/workflows:brainstorm` | Explore requirements and approaches through collaborative dialogue. Creates `docs/brainstorms/` doc. |
 | `/workflows:plan` | Transform feature descriptions into structured plans. Runs parallel research agents (repo-research, best-practices, framework-docs). Creates `docs/plans/` doc. |
 | `/workflows:work` | Execute plans with TodoWrite tracking, incremental commits, optional reviewer agents. Creates PR when done. |
@@ -155,6 +137,7 @@ Additional utilities: `/deepen-plan`, `/plan_review`, `/triage`, `/resolve_paral
 5. **Hypothesize** → `/workflows:compound` learnings, start next iteration
 
 ### Headless Quant Research Pattern
+
 ```bash
 # Create specification
 /qrd momentum-signal
@@ -189,6 +172,57 @@ When replicating an academic paper:
 8. **`/workflows:compound`** — Document learnings
 
 **Critical:** Papers bury constraints in single sentences (e.g., "80% remains in cash"). The `paper-reading` skill's structured extraction catches these. Raw WebFetch does not.
+### Autonomous Execution
+
+For headless/batch execution via `claude -p`, structure prompts to enable autonomous mode:
+
+```markdown
+## Task
+[Clear description]
+
+## Execution Mode: AUTONOMOUS
+- Make reasonable assumptions, document them
+- Skip interactive skill phases
+- Always produce output
+
+## Assumptions (use these, don't ask)
+- [Pre-answer likely questions]
+```
+
+**Skills compatible with autonomous mode:**
+- `/workflows:work` - Execution-focused
+- `market-data-fetcher` - Takes direct parameters
+- `gist-report` - Output generation
+- `qrd` - With pre-specified fields or AUTONOMOUS flag
+
+**Skills requiring modification for autonomous use:**
+- `qrd` - Provide all 8 fields or use AUTONOMOUS flag
+- `brainstorming` - Skip, use `/workflows:plan` instead
+
+See `.claude/rules/autonomous-mode.md` for full documentation.
+
+### Critical: Skills in Autonomous Mode
+
+**Autonomous mode does NOT mean skip skills.** Always invoke these:
+
+- `/context7` for library documentation (prevents performance bugs)
+- `/retrospective` at end (documents learnings)
+- `/gist-report` at end (shares results)
+
+Add explicit skill calls in your autonomous prompts:
+
+```markdown
+## Skills to Invoke
+1. /context7 pandas vectorization
+2. /retrospective
+3. /gist-report
+```
+
+### Vectorization Rule for Quant Code
+
+Never use row-by-row loops with pandas `.loc[]` in optimization:
+- Use `np.where()`, `pd.Series.shift()`, `ffill()`
+- `/context7 pandas vectorization` before writing signal generation
 
 ## Creating Gists
 
@@ -202,17 +236,32 @@ gh gist create tools/{tool}/main.py --public -d "Description"
 gh gist create tools/{tool}/main.py tools/{tool}/README.md --public -d "Description"
 
 # With output
-gh gist create tools/{tool}/main.py outputs/{result}.md --public -d "Tool + Results"
+gh gist create tools/{tool}/main.py output/{result}.md --public -d "Tool + Results"
 ```
 
 Return the gist URL to the user.
 
 ## Output Guidelines
 
-- Save charts/plots to `outputs/` as PNG or SVG
-- Save reports to `outputs/` as Markdown
+- Save artifacts to `output/{branch-name}/` subdirectory for branch-specific work
+- Get branch name: `git rev-parse --abbrev-ref HEAD`
+- Save charts/plots as PNG or SVG
+- Save reports as Markdown
 - Print summary to stdout for quick review
 - Include timestamp in output filenames: `{name}_{YYYYMMDD_HHMMSS}.png`
+
+## Research Workflow
+
+After completing research:
+
+1. Commit your work
+2. Run `/retrospective` to document learnings (hook will remind you)
+3. Retrospective saved to `output/{branch}/retrospective_{timestamp}.md`
+
+The `/retrospective` skill analyzes:
+- What went well/badly/ugly
+- Skill utilization (used vs. should have used)
+- Actionable improvements for the repo
 
 ## Code Style
 
@@ -222,14 +271,6 @@ Return the gist URL to the user.
 - Use `typer` or `click` for CLI tools
 - Keep tools self-contained (single main.py when possible)
 
-## Testing Ideas
-
-When experimenting:
-1. Start simple, iterate fast
-2. Print intermediate results
-3. Save interesting outputs
-4. Document what worked in the tool's README
-
 ## Claude Code Web Optimization
 
 This repository is optimized for Claude Code Web (cloud-based sessions).
@@ -237,19 +278,20 @@ This repository is optimized for Claude Code Web (cloud-based sessions).
 ### Environment Setup
 
 1. **Network Access**: Use "Full Internet" for market-data-fetcher access to:
-   - `stooq.pl` (Polish markets)
-   - `api.nbp.pl` (PLN FX rates)
-   - `query1.finance.yahoo.com` (Yahoo Finance)
-
+  
+  - `stooq.pl` (Polish markets)
+  - `api.nbp.pl` (PLN FX rates)
+  - `query1.finance.yahoo.com` (Yahoo Finance)
 2. **API Keys**: Set in environment configuration (not `.env` file):
-   - `TIINGO_API_KEY` - Optional, for Tiingo data
-   - `FRED_API_KEY` - Optional, for FRED economic data
-   - `CONTEXT7_API_KEY` - For context7 skill
-
+  
+  - `TIINGO_API_KEY` - Optional, for Tiingo data
+  - `FRED_API_KEY` - Optional, for FRED economic data
+  - `CONTEXT7_API_KEY` - For context7 skill
 3. **SessionStart Hook**: `scripts/setup-env.sh` auto-installs:
-   - `uv` package manager
-   - `gh` GitHub CLI
-   - Pre-downloads NLP models
+  
+  - `uv` package manager
+  - `gh` GitHub CLI
+  - Pre-downloads NLP models
 
 See `docs/claude-code-web-setup.md` for detailed configuration.
 
@@ -264,22 +306,9 @@ See `docs/claude-code-web-setup.md` for detailed configuration.
 
 - **Network limited**: Use `data/samples/` for cached market data (WIG20, SPY, BTC-USD)
 - **MCP servers**: Don't work in Cloud Web. Use `context7` skill CLI instead:
+  
   ```bash
   python3 .claude/skills/context7/scripts/context7.py search "react"
   ```
+  
 - **Local paths**: `/gist-transcript` references local paths, not cloud-compatible
-
-### Parallel Task Templates
-
-For multi-symbol analysis:
-```
-& Fetch WIG20 data and create momentum analysis
-& Fetch SPY data and create momentum analysis
-& Fetch BTC-USD data and create momentum analysis
-```
-
-For multi-perspective review:
-```
-& /workflows:review --focus security
-& /workflows:review --focus performance
-```

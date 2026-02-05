@@ -1,0 +1,15 @@
+{
+  "description": "Detect autonomous mode markers in prompts and inject guidance",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ${CLAUDE_PLUGIN_ROOT}/scripts/detect-autonomous.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -19,9 +19,6 @@ uv.lock
 *.swo
 .DS_Store
 
-# Outputs (keep directory, ignore contents)
-outputs/*
-!outputs/.gitkeep
 
 # Data (keep directory, allow committing sample data)
 # data/*
