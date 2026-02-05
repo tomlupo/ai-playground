@@ -9,8 +9,22 @@ Create structured research specification documents for quantitative finance proj
 
 ## Workflow
 
-### Phase 1: Discovery (Interactive)
+### Phase 1: Discovery
 
+**If autonomous mode is active** (prompt contains "AUTONOMOUS", "--autonomous", "/auto", or all 8 required fields are pre-specified):
+- Extract parameters from the prompt
+- Use reasonable defaults for any missing fields (see defaults below)
+- Document assumptions in the QRD output under "## Assumptions Made"
+- Proceed directly to Phase 2 without asking questions
+
+**Default assumptions for autonomous mode:**
+- Asset Universe: Use tickers mentioned in prompt, else SPY
+- Time Horizon: Daily data, 5+ year backtest
+- Constraints: Long-only, fully invested, daily rebalancing
+- Success Criteria: Sharpe > 0.5, MaxDD < 25%, positive CAGR
+- Infrastructure: vectorbt, pandas, data/samples/ for cached data
+
+**Otherwise (interactive mode):**
 Ask clarifying questions to understand the research scope. Do not proceed until answers are clear.
 
 **Required Information:**

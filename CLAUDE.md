@@ -122,6 +122,35 @@ MCP servers don't work on Claude Remote. Use these alternatives:
 /workflows:compound
 ```
 
+### Autonomous Execution
+
+For headless/batch execution via `claude -p`, structure prompts to enable autonomous mode:
+
+```markdown
+## Task
+[Clear description]
+
+## Execution Mode: AUTONOMOUS
+- Make reasonable assumptions, document them
+- Skip interactive skill phases
+- Always produce output
+
+## Assumptions (use these, don't ask)
+- [Pre-answer likely questions]
+```
+
+**Skills compatible with autonomous mode:**
+- `/workflows:work` - Execution-focused
+- `market-data-fetcher` - Takes direct parameters
+- `gist-report` - Output generation
+- `qrd` - With pre-specified fields or AUTONOMOUS flag
+
+**Skills requiring modification for autonomous use:**
+- `qrd` - Provide all 8 fields or use AUTONOMOUS flag
+- `brainstorming` - Skip, use `/workflows:plan` instead
+
+See `.claude/rules/autonomous-mode.md` for full documentation.
+
 ## Creating Gists
 
 When asked to share via gist:
