@@ -141,10 +141,25 @@ Return the gist URL to the user.
 
 ## Output Guidelines
 
-- Save charts/plots to `output/` as PNG or SVG
-- Save reports to `output/` as Markdown
+- Save artifacts to `output/{branch-name}/` subdirectory for branch-specific work
+- Get branch name: `git rev-parse --abbrev-ref HEAD`
+- Save charts/plots as PNG or SVG
+- Save reports as Markdown
 - Print summary to stdout for quick review
 - Include timestamp in output filenames: `{name}_{YYYYMMDD_HHMMSS}.png`
+
+## Research Workflow
+
+After completing research:
+
+1. Commit your work
+2. Run `/retrospective` to document learnings (hook will remind you)
+3. Retrospective saved to `output/{branch}/retrospective_{timestamp}.md`
+
+The `/retrospective` skill analyzes:
+- What went well/badly/ugly
+- Skill utilization (used vs. should have used)
+- Actionable improvements for the repo
 
 ## Code Style
 

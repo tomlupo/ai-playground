@@ -43,6 +43,11 @@
             "type": "command",
             "command": "python3 .claude/hooks/post-commit-changelog-hook.py",
             "tools": ["Bash"]
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/research-retrospective-hook.py",
+            "tools": ["Bash"]
           }
         ]
       }
