@@ -48,6 +48,11 @@
             "type": "command",
             "command": "python3 .claude/hooks/research-retrospective-hook.py",
             "tools": ["Bash"]
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/log_skill_use.py",
+            "tools": ["Skill"]
           }
         ]
       }
