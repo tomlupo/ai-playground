@@ -1,0 +1,18 @@
+# Quant Research Configuration
+#
+# All parameters in one place for reproducibility.
+# Modify these values, or override via CLI arguments.
+
+# --- Data ---
+symbol: SPY          # Ticker symbol (SPY, QQQ, TLT, GLD, BTC-USD available in data/samples/)
+
+# --- Strategy Parameters ---
+rsi_period: 2        # RSI lookback period (2 = Connors-style short-term)
+rsi_threshold: 10    # Enter when RSI below this value
+ibs_threshold: 0.2   # Enter when IBS below this value (close near day's low)
+
+# --- Notes ---
+# - Cached data available: SPY, QQQ, TLT, GLD, BTC-USD, WIG20
+# - Use /qrd to create structured specifications before research
+# - Set random seeds in code for reproducibility
+# - Parameter search ranges should be planned before coding

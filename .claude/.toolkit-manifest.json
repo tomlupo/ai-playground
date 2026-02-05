@@ -1,0 +1,9 @@
+{
+  "source": "/home/twilc/projects/qute-code-kit",
+  "bundle": "custom",
+  "installed": "2026-02-05T16:22:49Z",
+  "mode": "copy",
+  "components": [
+    {"type": "rule", "name": "datasets.md", "src": "rules/datasets.md"}
+  ]
+}

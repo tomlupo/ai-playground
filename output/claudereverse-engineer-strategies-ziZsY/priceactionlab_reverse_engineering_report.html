@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceActionLab Strategy Reverse Engineering Report</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; color: var(--primary); }
+        h2 { font-size: 1.5rem; margin: 2rem 0 1rem; border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; color: var(--secondary); }
+        .subtitle { color: var(--text-muted); margin-bottom: 2rem; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg); font-weight: 600; }
+        tr:hover { background: var(--bg); }
+        .metric-good { color: var(--success); font-weight: 600; }
+        .metric-warn { color: var(--warning); font-weight: 600; }
+        .metric-bad { color: var(--danger); font-weight: 600; }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-mr { background: #dbeafe; color: #1d4ed8; }
+        .badge-tf { background: #dcfce7; color: #166534; }
+        .badge-rs { background: #fef3c7; color: #92400e; }
+        .badge-seas { background: #f3e8ff; color: #7c3aed; }
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.85rem;
+        }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+        pre code { background: none; color: inherit; }
+        .highlight { background: #fef9c3; padding: 0.1rem 0.3rem; border-radius: 2px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+        .kpi { text-align: center; padding: 1rem; }
+        .kpi-value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+        .kpi-label { color: var(--text-muted); font-size: 0.875rem; }
+        ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+        li { margin: 0.25rem 0; }
+        .source-link { color: var(--primary); text-decoration: none; }
+        .source-link:hover { text-decoration: underline; }
+        .disclaimer {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .img-container { text-align: center; margin: 1rem 0; }
+        .img-container img { max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PriceActionLab Strategy Reverse Engineering</h1>
+        <p class="subtitle">Inferring trading strategy rules from public performance metrics | Generated: February 5, 2026</p>
+
+        <div class="disclaimer">
+            <strong>Disclaimer:</strong> These are educated approximations based on public information. The actual PriceActionLab strategies may differ significantly. This analysis is for educational and research purposes only.
+        </div>
+
+        <h2>Executive Summary</h2>
+        <div class="card">
+            <p>This report analyzes 10 trading strategies from <a href="https://www.priceactionlab.com/Blog/trading-strategies-for-sale/" class="source-link">PriceActionLab</a> and attempts to reverse-engineer their logic based on:</p>
+            <ul>
+                <li>Published performance metrics (CAGR, MDD, Sharpe, correlation, beta, alpha)</li>
+                <li>Strategy descriptions (mean-reversion, trend-following, regime-switching)</li>
+                <li>Published indicator formulas (Momersion indicator)</li>
+                <li>Academic literature on similar approaches (Connors RSI, calendar effects)</li>
+            </ul>
+        </div>
+
+        <div class="grid">
+            <div class="card kpi">
+                <div class="kpi-value">10</div>
+                <div class="kpi-label">Strategies Analyzed</div>
+            </div>
+            <div class="card kpi">
+                <div class="kpi-value">4</div>
+                <div class="kpi-label">Strategy Types Identified</div>
+            </div>
+            <div class="card kpi">
+                <div class="kpi-value">1.15</div>
+                <div class="kpi-label">Highest Sharpe (MRMOM)</div>
+            </div>
+            <div class="card kpi">
+                <div class="kpi-value">14.4%</div>
+                <div class="kpi-label">Best CAGR (B2S2DJ)</div>
+            </div>
+        </div>
+
+        <h2>Target Performance Metrics</h2>
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Type</th>
+                        <th>Markets</th>
+                        <th>CAGR</th>
+                        <th>MDD</th>
+                        <th>Sharpe</th>
+                        <th>Corr</th>
+                        <th>Beta</th>
+                        <th>Alpha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>MRETF</strong></td>
+                        <td><span class="badge badge-mr">Mean-Rev</span></td>
+                        <td>SPY, QQQ, TLT</td>
+                        <td>5.2%</td>
+                        <td class="metric-good">-9.3%</td>
+                        <td>0.78</td>
+                        <td>0.41</td>
+                        <td class="metric-good">0.14</td>
+                        <td>2.9%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MRETFLS</strong></td>
+                        <td><span class="badge badge-mr">Mean-Rev L/S</span></td>
+                        <td>SPY, QQQ, TLT</td>
+                        <td>5.6%</td>
+                        <td>-17.4%</td>
+                        <td>0.62</td>
+                        <td class="metric-good">0.07</td>
+                        <td class="metric-good">0.03</td>
+                        <td>3.6%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>B2S2DJ</strong></td>
+                        <td><span class="badge badge-mr">Mean-Rev</span></td>
+                        <td>Dow 30</td>
+                        <td class="metric-good">14.4%</td>
+                        <td class="metric-bad">-30.8%</td>
+                        <td>0.84</td>
+                        <td>0.84</td>
+                        <td>0.78</td>
+                        <td>3.7%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>B2S2ETF</strong></td>
+                        <td><span class="badge badge-mr">Mean-Rev</span></td>
+                        <td>SPY</td>
+                        <td>9.1%</td>
+                        <td class="metric-bad">-30.6%</td>
+                        <td>0.63</td>
+                        <td>0.76</td>
+                        <td>0.60</td>
+                        <td>2.5%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TFDLS</strong></td>
+                        <td><span class="badge badge-tf">Trend-Follow</span></td>
+                        <td>23 Futures</td>
+                        <td class="metric-good">14.1%</td>
+                        <td class="metric-bad">-32.2%</td>
+                        <td>0.82</td>
+                        <td class="metric-good">-0.07</td>
+                        <td class="metric-good">-0.06</td>
+                        <td class="metric-good">5.2%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MRMOM</strong></td>
+                        <td><span class="badge badge-rs">Regime-Switch</span></td>
+                        <td>SPY, QQQ, TLT, GLD</td>
+                        <td>10.3%</td>
+                        <td class="metric-good">-16.8%</td>
+                        <td class="metric-good">1.15</td>
+                        <td>0.67</td>
+                        <td>0.32</td>
+                        <td>4.2%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ETFMR</strong></td>
+                        <td><span class="badge badge-mr">Mean-Rev</span></td>
+                        <td>SPY, QQQ</td>
+                        <td>10.0%</td>
+                        <td>-22.9%</td>
+                        <td>0.82</td>
+                        <td>0.68</td>
+                        <td>0.44</td>
+                        <td>3.6%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ETFSEAS</strong></td>
+                        <td><span class="badge badge-seas">Seasonality</span></td>
+                        <td>SPY, TLT, GLD</td>
+                        <td>7.3%</td>
+                        <td class="metric-good">-13.4%</td>
+                        <td>0.83</td>
+                        <td class="metric-good">0.22</td>
+                        <td class="metric-good">0.10</td>
+                        <td>4.2%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ETFMO</strong></td>
+                        <td><span class="badge badge-seas">Seasonality</span></td>
+                        <td>Leveraged ETF</td>
+                        <td class="metric-good">13.1%</td>
+                        <td>-21.3%</td>
+                        <td>0.86</td>
+                        <td class="metric-good">-0.08</td>
+                        <td class="metric-good">-0.07</td>
+                        <td class="metric-good">7.8%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MRDJ</strong></td>
+                        <td><span class="badge badge-mr">Mean-Rev</span></td>
+                        <td>Dow 30</td>
+                        <td>10.3%</td>
+                        <td>-22.3%</td>
+                        <td>0.74</td>
+                        <td>0.52</td>
+                        <td>0.39</td>
+                        <td>3.6%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2>Key Discoveries</h2>
+
+        <h3>1. Momersion Indicator (Published Formula)</h3>
+        <div class="card">
+            <p>The <strong>Momersion</strong> indicator was published by PriceActionLab and is central to the MRMOM strategy:</p>
+            <pre><code>Momersion(n) = 100 * MOMc / (MOMc + MRc)
+
+Where:
+  MOMc = count of same-sign consecutive returns (momentum)
+  MRc  = count of opposite-sign consecutive returns (mean-reversion)
+  n    = lookback period (typically 250 days)
+
+For each period from 1 to n:
+  If r(i) * r(i-1) > 0 --> increment MOMc (momentum)
+  If r(i) * r(i-1) < 0 --> increment MRc (mean-reversion)</code></pre>
+            <p><strong>Interpretation:</strong></p>
+            <ul>
+                <li><span class="highlight">Above 50%</span>: Momentum-dominated regime - use trend-following</li>
+                <li><span class="highlight">Below 50%</span>: Mean-reversion-dominated regime - buy dips</li>
+            </ul>
+            <p><strong>Source:</strong> <a href="https://www.priceactionlab.com/Blog/2015/08/momersion-indicator/" class="source-link">Momersion Indicator - PriceActionLab</a></p>
+        </div>
+
+        <h3>2. RSI(2) Mean-Reversion Pattern</h3>
+        <div class="card">
+            <p>Based on Larry Connors' research, likely used in MRETF, ETFMR strategies:</p>
+            <pre><code>Entry:  RSI(2) < 10  (deeply oversold)
+Exit:   Price crosses above 5-day SMA
+Filter: Price > 200-day SMA (uptrend only)
+
+Key Statistics (from Connors research):
+  - Win rate: ~69%
+  - Avg holding period: 4-5 days
+  - No stop-loss (destroys profitability)</code></pre>
+            <p><strong>Source:</strong> <a href="https://chartschool.stockcharts.com/table-of-contents/trading-strategies-and-models/trading-strategies/rsi-2" class="source-link">RSI(2) - StockCharts</a></p>
+        </div>
+
+        <h3>3. B2S2 Pattern (Buy 2 Sell 2)</h3>
+        <div class="card">
+            <p>PriceActionLab describes B2S2 as having <em>"no parameters to optimize and no filters"</em>:</p>
+            <pre><code>Entry: 2+ consecutive down days
+Exit:  2+ consecutive up days
+
+For multi-stock version (B2S2DJ):
+  - Rank by lowest rate-of-change in lookback
+  - Maximum 10 concurrent positions
+  - Equal-weight allocation
+  - Position size: Available equity / 10</code></pre>
+        </div>
+
+        <h3>4. Seasonality Patterns</h3>
+        <div class="card">
+            <p>ETFSEAS exploits well-documented calendar effects:</p>
+            <ul>
+                <li><strong>Turn-of-month effect:</strong> Last trading day + first 3 days of new month</li>
+                <li><strong>End-of-month effect:</strong> Last 4 trading days tend to be positive</li>
+                <li><strong>Day-of-week:</strong> Monday/Friday often show positive bias</li>
+            </ul>
+            <p>Very low exposure (~28%) suggests trading only on specific days matching these patterns.</p>
+        </div>
+
+        <h3>5. Trend-Following (TFDLS)</h3>
+        <div class="card">
+            <p>Classic Donchian-style breakout system:</p>
+            <pre><code>Long Entry:  Price > N-day high (breakout)
+Short Entry: Price < N-day low (breakdown)
+Exit:        Opposite breakout or ATR-based stop
+
+Configuration:
+  - 23 futures contracts (diversified)
+  - Identical parameters across all markets
+  - ATR-based position sizing
+  - Capital requirement: ~$1M for proper sizing</code></pre>
+            <p><strong>Key characteristic:</strong> Negative correlation with SPY (-0.07) provides crisis alpha.</p>
+        </div>
+
+        <h2>Backtest Results (Approximations)</h2>
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Target CAGR</th>
+                        <th>Achieved CAGR</th>
+                        <th>Target MDD</th>
+                        <th>Achieved MDD</th>
+                        <th>Target Sharpe</th>
+                        <th>Achieved Sharpe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>MRETF</td>
+                        <td>5.2%</td>
+                        <td>4.0%</td>
+                        <td>-9.3%</td>
+                        <td>-14.7%</td>
+                        <td>0.78</td>
+                        <td>0.31</td>
+                    </tr>
+                    <tr>
+                        <td>MRMOM</td>
+                        <td>10.3%</td>
+                        <td>4.8%</td>
+                        <td>-16.8%</td>
+                        <td class="metric-good">-16.4%</td>
+                        <td>1.15</td>
+                        <td>0.36</td>
+                    </tr>
+                    <tr>
+                        <td>B2S2ETF</td>
+                        <td>9.1%</td>
+                        <td class="metric-good">7.7%</td>
+                        <td>-30.6%</td>
+                        <td>-35.8%</td>
+                        <td>0.63</td>
+                        <td>0.39</td>
+                    </tr>
+                    <tr>
+                        <td>ETFSEAS</td>
+                        <td>7.3%</td>
+                        <td class="metric-good">8.6%</td>
+                        <td>-13.4%</td>
+                        <td>-25.2%</td>
+                        <td>0.83</td>
+                        <td>0.48</td>
+                    </tr>
+                    <tr>
+                        <td>ETFMR</td>
+                        <td>10.0%</td>
+                        <td>3.6%</td>
+                        <td>-22.9%</td>
+                        <td class="metric-good">-15.5%</td>
+                        <td>0.82</td>
+                        <td>0.20</td>
+                    </tr>
+                    <tr>
+                        <td>TFDLS*</td>
+                        <td>14.1%</td>
+                        <td>-0.6%</td>
+                        <td>-32.2%</td>
+                        <td>-36.1%</td>
+                        <td>0.82</td>
+                        <td>-0.24</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><em>*TFDLS tested on ETFs instead of futures - requires proper futures data for valid comparison.</em></p>
+        </div>
+
+        <h2>Key Insights for Practitioners</h2>
+        <div class="card">
+            <h3>What Works</h3>
+            <ul>
+                <li><strong>Low beta strategies:</strong> MRETF (0.14), ETFSEAS (0.10) achieve returns with minimal market exposure</li>
+                <li><strong>Regime adaptation:</strong> MRMOM's Sharpe of 1.15 suggests regime-switching adds significant value</li>
+                <li><strong>Simple rules:</strong> B2S2's "no parameters" approach suggests robustness over optimization</li>
+                <li><strong>Diversification:</strong> TFDLS's negative correlation provides portfolio-level benefits</li>
+            </ul>
+
+            <h3>Risk Factors</h3>
+            <ul>
+                <li><strong>No stop-losses:</strong> Most mean-reversion strategies don't use stops - high win rate compensates</li>
+                <li><strong>Regime dependency:</strong> Strategies can fail when market regimes change</li>
+                <li><strong>Transaction costs:</strong> High-turnover strategies are sensitive to slippage (2-5% impact)</li>
+                <li><strong>Data requirements:</strong> Stock strategies need delisted data (Norgate), futures need continuous contracts</li>
+            </ul>
+        </div>
+
+        <h2>Implementation Recommendations</h2>
+        <div class="card">
+            <ol>
+                <li><strong>Start with MRETF approach:</strong> RSI(2) with trend filter is well-documented and simple</li>
+                <li><strong>Implement Momersion indicator:</strong> Use for regime detection to switch between MR and momentum</li>
+                <li><strong>Test B2S2 variants:</strong> Consecutive day patterns are robust across markets</li>
+                <li><strong>Calendar effects:</strong> End-of-month and turn-of-month are well-researched anomalies</li>
+                <li><strong>Proper data:</strong> Use Norgate for stocks (survivor-bias-free), proper continuous contracts for futures</li>
+            </ol>
+        </div>
+
+        <h2>Sources</h2>
+        <div class="card">
+            <ul>
+                <li><a href="https://www.priceactionlab.com/Blog/trading-strategies-for-sale/" class="source-link">PriceActionLab Trading Strategies</a></li>
+                <li><a href="https://www.priceactionlab.com/Blog/2015/08/momersion-indicator/" class="source-link">Momersion Indicator</a></li>
+                <li><a href="https://www.priceactionlab.com/Blog/2024/01/mean-reversion-and-momentum-regime-switching/" class="source-link">Mean-Reversion and Momentum Regime Switching</a></li>
+                <li><a href="https://www.priceactionlab.com/Blog/2025/01/the-huge-optimization-space-of-mean-reversion/" class="source-link">The Huge Optimization Space of Mean Reversion</a></li>
+                <li><a href="https://chartschool.stockcharts.com/table-of-contents/trading-strategies-and-models/trading-strategies/rsi-2" class="source-link">Larry Connors RSI(2) - StockCharts</a></li>
+                <li><a href="https://www.quantifiedstrategies.com/connors-rsi/" class="source-link">Connors RSI Trading Strategy - QuantifiedStrategies</a></li>
+            </ul>
+        </div>
+
+        <footer style="text-align: center; margin-top: 3rem; color: var(--text-muted); font-size: 0.875rem;">
+            <p>Generated by Claude Code | February 5, 2026</p>
+            <p>Tool: <code>tools/strategy-reverse-engineer/main.py</code></p>
+        </footer>
+    </div>
+</body>
+</html>

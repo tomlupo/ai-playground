@@ -90,6 +90,17 @@ except ImportError:
         """Fallback if ccxt not available."""
         return '/' in s or s.upper().endswith(('USDT', 'USDC', 'BTC'))
 
+try:
+    from fetch_kenneth_french import KennethFrenchFetcher, is_factor_symbol, FACTOR_SYMBOLS
+    KF_AVAILABLE = True
+except ImportError:
+    KF_AVAILABLE = False
+    FACTOR_SYMBOLS = set()
+
+    def is_factor_symbol(s):
+        """Fallback if kenneth_french not available."""
+        return False
+
 
 class UnifiedMarketDataFetcher:
     """
@@ -168,7 +179,10 @@ class UnifiedMarketDataFetcher:
                 print("[Unified] FRED API key not configured, FRED unavailable")
 
         if PDR_AVAILABLE:
-            self.fetchers['pdr'] = PandasDataReaderFetcher(use_cache, cache_hours)
+            try:
+                self.fetchers['pdr'] = PandasDataReaderFetcher(use_cache, cache_hours)
+            except ImportError:
+                pass  # pandas-datareader not installed
 
         # Initialize Tiingo (requires API key)
         if TIINGO_AVAILABLE:
@@ -183,6 +197,14 @@ class UnifiedMarketDataFetcher:
                 self.fetchers['ccxt'] = CCXTFetcher(crypto_exchange, use_cache, cache_hours)
             except Exception as e:
                 print(f"[Unified] CCXT unavailable: {e}")
+
+        # Initialize Kenneth French for factor data (no API key needed)
+        if KF_AVAILABLE:
+            try:
+                # Use longer cache (1 week) since data updates monthly
+                self.fetchers['kenneth_french'] = KennethFrenchFetcher(use_cache, cache_hours=168)
+            except Exception as e:
+                print(f"[Unified] Kenneth French unavailable: {e}")
 
     def fetch(self, identifier: str, start_date: Optional[str] = None,
               end_date: Optional[str] = None, source: Optional[str] = None,
@@ -328,7 +350,11 @@ class UnifiedMarketDataFetcher:
         ticker_lower = ticker.lower()
         ticker_upper = ticker.upper()
 
-        # Check for crypto symbols first (BTC/USDT, ETHUSDT, etc.)
+        # Check for Kenneth French factor symbols and datasets first
+        if is_factor_symbol(ticker) and 'kenneth_french' in self.fetchers:
+            return ['kenneth_french']
+
+        # Check for crypto symbols (BTC/USDT, ETHUSDT, etc.)
         if is_crypto_symbol(ticker) and 'ccxt' in self.fetchers:
             return ['ccxt']
 
@@ -428,6 +454,11 @@ class UnifiedMarketDataFetcher:
             # CCXT needs timeframe parameter
             timeframe = kwargs.pop('timeframe', '1d')
             return fetcher.fetch(ticker, start_date, end_date, timeframe=timeframe, **kwargs)
+
+        elif source == 'kenneth_french':
+            # Kenneth French uses 'dataset' instead of 'ticker'
+            frequency = kwargs.pop('frequency', 'auto')
+            return fetcher.fetch(ticker, start_date, end_date, frequency=frequency, **kwargs)
 
         else:
             # Standard fetchers (stooq, yahoo, fred, tiingo)

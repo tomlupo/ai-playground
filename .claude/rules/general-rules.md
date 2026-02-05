@@ -12,6 +12,7 @@
 3. **Review relevant documentation** - Read project-specific guides, methodology docs, knowledge base, and agent-specific instructions
 4. **Confirm file paths** - State full path and verify it matches project structure before creating files
 5. **When uncertain** - Ask before proceeding rather than making assumptions
+   - **Exception: Autonomous Mode** - If the prompt explicitly requests autonomous execution (contains "AUTONOMOUS MODE", "## Execution Mode: AUTONOMOUS", "--autonomous", or "/auto"), make reasonable assumptions and document them in output instead of asking. See `.claude/rules/autonomous-mode.md`.
 
 ## Communication Style
 

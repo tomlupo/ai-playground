@@ -6,9 +6,9 @@ Quick experimentation repo for Python tools and ideas. Optimized for Claude Code
 
 **Core rule:** Build what user asks. Test if code works (actually run the code and verify results).
 
-**Output:** Always produce outputs.
+**Output:** Always produce output.
 
-- **Save artifacts** to `outputs/`: charts/plots (PNG, SVG), reports (Markdown, HTML), data (JSON). Use timestamped filenames: `{name}_{YYYYMMDD_HHMMSS}.png`.
+- **Save artifacts** to `output/`: charts/plots (PNG, SVG), reports (Markdown, HTML), data (JSON). Use timestamped filenames: `{name}_{YYYYMMDD_HHMMSS}.png`.
 - **Print** a short summary to stdout for quick review.
 - **Always send** a summary report with the `/gist-report` skill.
 
@@ -23,7 +23,7 @@ ai-playground/
 │       └── README.md        # What it does, how to use
 ├── shared/                   # Shared utilities across tools
 ├── data/                     # Sample data for experiments
-├── outputs/                  # Generated outputs, reports, charts
+├── output/                  # Generated output, reports, charts
 └── .claude/skills/          # Project-specific skills
 ```
 
@@ -122,6 +122,58 @@ MCP servers don't work on Claude Remote. Use these alternatives:
 /workflows:compound
 ```
 
+### Autonomous Execution
+
+For headless/batch execution via `claude -p`, structure prompts to enable autonomous mode:
+
+```markdown
+## Task
+[Clear description]
+
+## Execution Mode: AUTONOMOUS
+- Make reasonable assumptions, document them
+- Skip interactive skill phases
+- Always produce output
+
+## Assumptions (use these, don't ask)
+- [Pre-answer likely questions]
+```
+
+**Skills compatible with autonomous mode:**
+- `/workflows:work` - Execution-focused
+- `market-data-fetcher` - Takes direct parameters
+- `gist-report` - Output generation
+- `qrd` - With pre-specified fields or AUTONOMOUS flag
+
+**Skills requiring modification for autonomous use:**
+- `qrd` - Provide all 8 fields or use AUTONOMOUS flag
+- `brainstorming` - Skip, use `/workflows:plan` instead
+
+See `.claude/rules/autonomous-mode.md` for full documentation.
+
+### Critical: Skills in Autonomous Mode
+
+**Autonomous mode does NOT mean skip skills.** Always invoke these:
+
+- `/context7` for library documentation (prevents performance bugs)
+- `/retrospective` at end (documents learnings)
+- `/gist-report` at end (shares results)
+
+Add explicit skill calls in your autonomous prompts:
+
+```markdown
+## Skills to Invoke
+1. /context7 pandas vectorization
+2. /retrospective
+3. /gist-report
+```
+
+### Vectorization Rule for Quant Code
+
+Never use row-by-row loops with pandas `.loc[]` in optimization:
+- Use `np.where()`, `pd.Series.shift()`, `ffill()`
+- `/context7 pandas vectorization` before writing signal generation
+
 ## Creating Gists
 
 When asked to share via gist:
@@ -134,17 +186,32 @@ gh gist create tools/{tool}/main.py --public -d "Description"
 gh gist create tools/{tool}/main.py tools/{tool}/README.md --public -d "Description"
 
 # With output
-gh gist create tools/{tool}/main.py outputs/{result}.md --public -d "Tool + Results"
+gh gist create tools/{tool}/main.py output/{result}.md --public -d "Tool + Results"
 ```
 
 Return the gist URL to the user.
 
 ## Output Guidelines
 
-- Save charts/plots to `outputs/` as PNG or SVG
-- Save reports to `outputs/` as Markdown
+- Save artifacts to `output/{branch-name}/` subdirectory for branch-specific work
+- Get branch name: `git rev-parse --abbrev-ref HEAD`
+- Save charts/plots as PNG or SVG
+- Save reports as Markdown
 - Print summary to stdout for quick review
 - Include timestamp in output filenames: `{name}_{YYYYMMDD_HHMMSS}.png`
+
+## Research Workflow
+
+After completing research:
+
+1. Commit your work
+2. Run `/retrospective` to document learnings (hook will remind you)
+3. Retrospective saved to `output/{branch}/retrospective_{timestamp}.md`
+
+The `/retrospective` skill analyzes:
+- What went well/badly/ugly
+- Skill utilization (used vs. should have used)
+- Actionable improvements for the repo
 
 ## Code Style
 
