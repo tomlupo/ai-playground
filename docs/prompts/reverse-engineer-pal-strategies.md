@@ -35,6 +35,73 @@ position = signal.where(signal == 1).ffill().fillna(0)
 
 Row-by-row loops will cause timeout on optimization grids.
 
+## Iterative Refinement Loop
+
+**CRITICAL:** Do NOT accept the first optimization result. Keep iterating until metrics are close to targets.
+
+### For Each Strategy:
+
+1. **Initial Grid Search** - Run with standard parameter ranges
+2. **Evaluate Against Targets:**
+   | Metric | Tolerance |
+   |--------|-----------|
+   | Sharpe | ±0.15 |
+   | CAGR | ±3% |
+   | Max DD | ±10% |
+
+3. **If ANY metric outside tolerance:**
+   - Print: `"Iteration N: Sharpe=X.XX (target Y.YY, gap Z.ZZ)"`
+   - Analyze which metric is furthest off
+   - Adjust parameter grid based on gap analysis
+   - **GO BACK TO STEP 1**
+
+4. **Gap-Based Adjustments:**
+   | Gap Type | Adjustment |
+   |----------|------------|
+   | Sharpe too low | Try longer holds (hold_days +2), tighter exits (rsi_exit -10) |
+   | CAGR too low | Lower entry thresholds (rsi_entry -5), more signals |
+   | DD too high | Shorter holds (hold_days -2), faster exits (rsi_exit -5) |
+   | All metrics off | Try completely different signal approach (switch RSI→IBS or add filters) |
+
+5. **Max 5 iterations per strategy** - then accept best result and move on
+
+### Iteration History
+
+Track and print progress for each strategy:
+```
+ETFMR Iteration 1: Sharpe=0.49, CAGR=7.3%, MDD=-21.6% (target: 0.82, 10.0%, -22.9%)
+  → Gap: Sharpe -0.33, CAGR -2.7%
+  → Adjustment: Trying rsi_thresh range [30-50] instead of [10-30]
+ETFMR Iteration 2: Sharpe=0.61, CAGR=8.1%, MDD=-20.5%
+  → Gap: Sharpe -0.21, CAGR -1.9%
+  → Adjustment: Adding IBS filter with threshold 0.15
+ETFMR Iteration 3: Sharpe=0.71, CAGR=9.2%, MDD=-22.1%
+  → Within tolerance! SUCCESS.
+```
+
+### Success Criteria
+
+Strategy is "successfully replicated" when ALL of:
+- Sharpe within ±0.15 of target
+- CAGR within ±3% of target
+- Max DD within ±10% of target
+
+OR max iterations (5) reached → report best attempt with explanation of gap.
+
+### Reference: Previous Best Results
+
+These parameters achieved good results in earlier runs - use as starting points:
+```python
+# ETFMR - achieved 0.71 Sharpe (target 0.82)
+{'rsi_thresh': 40, 'ibs_thresh': 0.15}
+
+# B2S2ETF - achieved 0.53 Sharpe (target 0.63)
+{'down_days': 1, 'up_days': 1}
+
+# MRETF - achieved 0.66 Sharpe (target 0.78)
+{'entry': 0.1, 'exit': 0.9, 'max_hold': 15}
+```
+
 ## Task
 
 Reverse engineer trading strategies from Price Action Lab based on their published performance metrics. Create implementable Python backtests that attempt to replicate their reported results.
