@@ -6,9 +6,9 @@ Quick experimentation repo for Python tools and ideas. Optimized for Claude Code
 
 **Core rule:** Build what user asks. Test if code works (actually run the code and verify results).
 
-**Output:** Always produce outputs.
+**Output:** Always produce output.
 
-- **Save artifacts** to `outputs/`: charts/plots (PNG, SVG), reports (Markdown, HTML), data (JSON). Use timestamped filenames: `{name}_{YYYYMMDD_HHMMSS}.png`.
+- **Save artifacts** to `output/`: charts/plots (PNG, SVG), reports (Markdown, HTML), data (JSON). Use timestamped filenames: `{name}_{YYYYMMDD_HHMMSS}.png`.
 - **Print** a short summary to stdout for quick review.
 - **Always send** a summary report with the `/gist-report` skill.
 
@@ -23,7 +23,7 @@ ai-playground/
 │       └── README.md        # What it does, how to use
 ├── shared/                   # Shared utilities across tools
 ├── data/                     # Sample data for experiments
-├── outputs/                  # Generated outputs, reports, charts
+├── output/                  # Generated output, reports, charts
 └── .claude/skills/          # Project-specific skills
 ```
 
@@ -134,15 +134,15 @@ gh gist create tools/{tool}/main.py --public -d "Description"
 gh gist create tools/{tool}/main.py tools/{tool}/README.md --public -d "Description"
 
 # With output
-gh gist create tools/{tool}/main.py outputs/{result}.md --public -d "Tool + Results"
+gh gist create tools/{tool}/main.py output/{result}.md --public -d "Tool + Results"
 ```
 
 Return the gist URL to the user.
 
 ## Output Guidelines
 
-- Save charts/plots to `outputs/` as PNG or SVG
-- Save reports to `outputs/` as Markdown
+- Save charts/plots to `output/` as PNG or SVG
+- Save reports to `output/` as Markdown
 - Print summary to stdout for quick review
 - Include timestamp in output filenames: `{name}_{YYYYMMDD_HHMMSS}.png`
 
