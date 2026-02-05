@@ -37,22 +37,24 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/post-commit-changelog-hook.py",
-            "tools": ["Bash"]
+            "command": "python3 .claude/hooks/post-commit-changelog-hook.py"
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/research-retrospective-hook.py",
-            "tools": ["Bash"]
-          },
+            "command": "python3 .claude/hooks/research-retrospective-hook.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/log_skill_use.py",
-            "tools": ["Skill"]
+            "command": "python3 .claude/hooks/log_skill_use.py"
           }
         ]
       }

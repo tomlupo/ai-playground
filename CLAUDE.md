@@ -151,6 +151,29 @@ For headless/batch execution via `claude -p`, structure prompts to enable autono
 
 See `.claude/rules/autonomous-mode.md` for full documentation.
 
+### Critical: Skills in Autonomous Mode
+
+**Autonomous mode does NOT mean skip skills.** Always invoke these:
+
+- `/context7` for library documentation (prevents performance bugs)
+- `/retrospective` at end (documents learnings)
+- `/gist-report` at end (shares results)
+
+Add explicit skill calls in your autonomous prompts:
+
+```markdown
+## Skills to Invoke
+1. /context7 pandas vectorization
+2. /retrospective
+3. /gist-report
+```
+
+### Vectorization Rule for Quant Code
+
+Never use row-by-row loops with pandas `.loc[]` in optimization:
+- Use `np.where()`, `pd.Series.shift()`, `ffill()`
+- `/context7 pandas vectorization` before writing signal generation
+
 ## Creating Gists
 
 When asked to share via gist:

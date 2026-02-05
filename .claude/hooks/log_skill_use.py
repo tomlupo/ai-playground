@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 LOG_FILE = Path(".claude") / "skill-use-log.jsonl"
+DEBUG_FILE = Path(".claude") / "skill-use-debug.jsonl"
 
 
 def main():
@@ -25,6 +26,17 @@ def main():
         hook_input = json.loads(raw)
     except json.JSONDecodeError:
         return
+
+    # Debug: log raw input structure
+    DEBUG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(DEBUG_FILE, "a") as f:
+        debug_entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "tool_name": hook_input.get("tool_name"),
+            "keys": list(hook_input.keys()),
+            "tool_input_keys": list(hook_input.get("tool_input", {}).keys()) if isinstance(hook_input.get("tool_input"), dict) else str(type(hook_input.get("tool_input"))),
+        }
+        f.write(json.dumps(debug_entry) + "\n")
 
     # Extract skill name from tool input
     tool_input = hook_input.get("tool_input", {})
